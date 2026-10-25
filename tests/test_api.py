@@ -411,3 +411,18 @@ async def test_shared_system_state_request(client: WolfClient, portal: FakePorta
         200, json={"Values": [{"ValueId": 7, "State": 0}]}
     )
     assert await client.get_values(SYSTEM, 1000, [7]) == [Value(7, None, 0)]
+
+
+async def test_rejected_fresh_token_blocks_further_logins(
+    client: WolfClient, portal: FakePortal
+) -> None:
+    """401 after a fresh login counts as a failed login: no credential POST per poll."""
+    portal.api["GetSystemList"] = lambda r: httpx.Response(401)
+    with pytest.raises(ApiError):
+        await client.get_systems()
+    assert portal.logins == 2  # the initial login and the one relogin
+    for _ in range(4):
+        with pytest.raises(LoginFailed):
+            await client.get_systems()
+    assert portal.logins == 2
+    assert client.login_blocked_seconds > 0

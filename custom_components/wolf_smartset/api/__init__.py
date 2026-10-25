@@ -302,10 +302,16 @@ class WolfClient:
         except AuthError:
             raise
         except WolfError:
-            delay = min(LOGIN_BACKOFF_SECONDS * 2**failures, LOGIN_BACKOFF_MAX_SECONDS)
-            _login_backoff[key] = (now + delay, failures + 1)
+            self._record_login_failure(now)
             raise
         _login_backoff.pop(key, None)
+
+    def _record_login_failure(self, now: float) -> None:
+        """Block the next login attempt for this account, doubling per consecutive failure."""
+        key = self._username.lower()
+        _, failures = _login_backoff.get(key, (0.0, 0))
+        delay = min(LOGIN_BACKOFF_SECONDS * 2**failures, LOGIN_BACKOFF_MAX_SECONDS)
+        _login_backoff[key] = (now + delay, failures + 1)
 
     @property
     def login_blocked_seconds(self) -> int:
@@ -342,6 +348,7 @@ class WolfClient:
                 return await self._call(method, path, json=json, params=params)
             except _Unauthorized:
                 if attempt:
+                    self._record_login_failure(time.monotonic())
                     raise ApiError(401, path) from None
                 self._token = None
             except _InvalidSession:

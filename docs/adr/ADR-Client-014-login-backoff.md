@@ -18,7 +18,7 @@ ADR-Client-001 promised a typed `Maintenance` error; the client mapped ErrorCode
 
 1. The client keeps a process-wide table `_login_backoff` in `api/__init__.py`, keyed by the lower-cased username, holding the monotonic time until which logins are blocked and the number of consecutive failures.
 2. Before every login, `_ensure_session` checks the table. While blocked it raises `LoginFailed` without any request.
-3. Every failure of `_login` except `AuthError` records a block of `min(300 s · 2^failures, 3600 s)`. A successful login clears the entry. A wrong password sets no block, because its retries come from the user through the reauth dialog.
+3. Every failure of `_login` except `AuthError` records a block of `min(300 s · 2^failures, 3600 s)`. A successful login clears the entry. A wrong password sets no block, because its retries come from the user through the reauth dialog. A bearer token the portal rejects right after a fresh login (a second HTTP 401 within one request) counts as a failed login as well.
 4. The coordinator treats `LoginFailed` like `TooManyRequests` and `PortalUnavailable`: the poll interval doubles up to one hour and a repair issue appears after three steps. The config flow shows `portal_unavailable`.
 5. ErrorCode 6 raises `Maintenance`, a subclass of `PortalUnavailable`, so it takes the same backoff path.
 6. The diagnostics show `login_blocked_seconds`.
