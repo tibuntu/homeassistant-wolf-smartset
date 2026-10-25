@@ -64,6 +64,8 @@ def redact_ids(data: Any) -> Any:
 
 def format_number(value: float) -> str:
     """48.0 -> '48', 20.5 -> '20.5' (the portal sends plain decimal strings)."""
+    if value == 0:
+        value = 0.0  # never '-0'
     return f"{value:.6f}".rstrip("0").rstrip(".")
 
 
@@ -99,7 +101,10 @@ def validate(parameter: Parameter, target: str, access_level: int | None) -> Non
     minimum, maximum, step = parameter.minimum, parameter.maximum, parameter.step
     if minimum is None or maximum is None or step is None:
         raise _error("not_writable", name=parameter.label)
-    value = float(target)
+    try:
+        value = float(target.replace(",", "."))
+    except ValueError:
+        raise _error("invalid_number", name=parameter.label, value=target) from None
     if not minimum <= value <= maximum:
         raise _error(
             "out_of_range",

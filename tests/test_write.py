@@ -16,7 +16,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 from custom_components.wolf_smartset.api import ApiError, SystemState, Value
 from custom_components.wolf_smartset.const import CONF_DRY_RUN, CONF_MAX_WRITES_PER_HOUR, DOMAIN
 from custom_components.wolf_smartset.model import parse_description
-from custom_components.wolf_smartset.write import CONFIRM_AFTER_SECONDS, same_value
+from custom_components.wolf_smartset.write import CONFIRM_AFTER_SECONDS, format_number, same_value
 
 DHW_SETPOINT = 35000900000  # "Warmwassersolltemperatur eingestellt", 25-65 °C, step 1, value 50
 DHW_ONCE = 22004200000  # "1x Warmwasser", switch
@@ -530,3 +530,43 @@ async def test_rate_limit_ignores_records_without_time(
     await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False, CONF_MAX_WRITES_PER_HOUR: 1})
     await _set_setpoint(hass, 55)
     assert mock_client.write_value.await_count == 1
+
+
+def test_format_number_normalises_signed_zero() -> None:
+    """-0.0 would be sent as '-0'."""
+    assert format_number(-0.0) == "0"
+    assert format_number(0.0) == "0"
+    assert format_number(20.5) == "20.5"
+
+
+async def test_undo_of_an_unparsable_value_is_a_validation_error(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    hass_storage: dict[str, Any],
+) -> None:
+    """A corrupt old value raises a translated error instead of ValueError."""
+    hass_storage[f"{DOMAIN}.{mock_config_entry.entry_id}.history"] = {
+        "version": 1,
+        "key": f"{DOMAIN}.{mock_config_entry.entry_id}.history",
+        "data": {
+            "history": [
+                {
+                    "result": "ok",
+                    "system_id": 1234,
+                    "parameter_id": DHW_SETPOINT,
+                    "value_id": DHW_SETPOINT,
+                    "label": "x",
+                    "old": "abc",
+                    "new": "55",
+                    "source": "entity",
+                }
+            ]
+        },
+    }
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    button = er.async_get(hass).async_get_entity_id("button", DOMAIN, "1234_undo")
+    assert button
+    with pytest.raises(ServiceValidationError) as err:
+        await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
+    assert err.value.translation_key == "invalid_number"

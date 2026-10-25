@@ -70,6 +70,9 @@
     "out_of_range": {
       "message": "{value} is outside the range of {name} ({min} to {max})."
     },
+    "invalid_number": {
+      "message": "{value} is not a number for {name}."
+    },
     "invalid_step": {
       "message": "{value} does not match the step {step} of {name}."
     },
