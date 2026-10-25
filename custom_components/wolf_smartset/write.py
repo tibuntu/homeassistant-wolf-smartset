@@ -96,16 +96,18 @@ def validate(parameter: Parameter, target: str, access_level: int | None) -> Non
         if target not in parameter.selectable:
             raise _error("invalid_option", name=parameter.label, value=target)
         return
-    minimum, maximum, value = parameter.minimum, parameter.maximum, float(target)
-    if minimum is None or maximum is None or not minimum <= value <= maximum:
+    minimum, maximum, step = parameter.minimum, parameter.maximum, parameter.step
+    if minimum is None or maximum is None or step is None:
+        raise _error("not_writable", name=parameter.label)
+    value = float(target)
+    if not minimum <= value <= maximum:
         raise _error(
             "out_of_range",
             name=parameter.label,
             value=target,
-            min=format_number(minimum or 0),
-            max=format_number(maximum or 0),
+            min=format_number(minimum),
+            max=format_number(maximum),
         )
-    step = parameter.step or 1.0
     steps = (value - minimum) / step
     if not math.isclose(steps, round(steps), abs_tol=1e-6):
         raise _error("invalid_step", name=parameter.label, value=target, step=format_number(step))

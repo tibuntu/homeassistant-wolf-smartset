@@ -119,3 +119,28 @@ def test_enabled_by_default(description: dict[str, Any]) -> None:
         "Mischermotor",
     ):
         assert kept not in disabled
+
+
+def _descriptors(description: dict[str, Any], value_id: int) -> list[dict[str, Any]]:
+    """Every descriptor of a ValueId anywhere in the description."""
+    found: list[dict[str, Any]] = []
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            if node.get("ValueId") == value_id:
+                found.append(node)
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(description)
+    return found
+
+
+def test_number_needs_a_step(description: dict[str, Any]) -> None:
+    """Without StepWidth a numeric input cannot be validated, so it stays a sensor."""
+    for descriptor in _descriptors(description, 35000900000):
+        descriptor.pop("StepWidth", None)
+    assert parse_description(description).parameters[35000900000].kind is Kind.SENSOR

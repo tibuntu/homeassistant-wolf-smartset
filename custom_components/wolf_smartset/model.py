@@ -120,6 +120,8 @@ class Parameter:
                 self.minimum is not None
                 and self.maximum is not None
                 and self.minimum < self.maximum
+                and self.step is not None
+                and self.step > 0
             )
             return Kind.NUMBER if self.writable and limits_ok else Kind.SENSOR
         if ct in (CT_COMBO_IMAGE, CT_SOLAR_STATISTICS, CT_SOLAR_STATISTICS_BLOCK):
