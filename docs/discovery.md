@@ -597,3 +597,4 @@ Freigabe des Eigentümers; ein einziger Write, danach nur Polls. Ausgangslage 18
 1. „1x Warmwasser“ startet eine Ladung selbst: Ventil und Verdichter schalten innerhalb eines Poll-Intervalls auf Warmwasser.
 2. Die Regelung setzt den Parameter selbst auf 0 zurück. Hier nach etwa 16 Minuten, bei 37 °C, also weder nach der im Portal genannten Stunde noch bei Solltemperatur. Was das Ende ausgelöst hat, zeigen die gepollten Werte nicht.
 3. Zusammen mit Abschnitt 14: Der Parameter hat einen lesbaren Zustand, die Regelung beendet ihn selbst, und Schreiben von 0 beendet ihn vorzeitig.
+4. **Entscheidung (Eigentümer, 2026-10-25):** Der Parameter bleibt ein `switch`. Er zeigt, ob 1x läuft, folgt dem Rücksetzen der Regelung über den Poll und kann die Ladung abbrechen. Ein `button` hätte das Abbrechen und den sichtbaren Zustand verloren.
