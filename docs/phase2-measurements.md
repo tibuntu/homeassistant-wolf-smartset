@@ -17,6 +17,15 @@ Installation: Wolf CHA heat pump, Link home (firmware 4.40), owner account. Writ
 
 Redaction finding: `GetSystemList` returns `GatewayUsername`, which equals the Link home serial number on the device label. The recording script now redacts it. Other free-text fields contain only Wolf's standard texts.
 
+## 2026-10-25 – Review of the running v0.1.0 (recorder, read-only)
+
+| Check | Result |
+|---|---|
+| "Verdichterfrequenz", "MKP Mischerkreispumpe", "Mischermotor MM" | not permanently `unknown`: `unknown` at setup (no value in the description), first values at the first poll 2 min later (`0.0`, `1`, `0`). Fixed by a poll right after setup (ADR-Model-008) |
+| "Raumtemperatur" | `unknown`, no value from the portal (no room sensor) |
+| Verbrauch, JAZ, TAZ, MAZ | `0.0`; no S0 meter connected. No visibility condition in the description, WP110 shows 1000 regardless |
+| ValueId prefix vs. device | unanimous for 4, 19, 22, 27, 36; no evidence for 35 (DHW). See ADR-Model-009 |
+
 ## Next measurements (HA test run)
 
 - Logins per day and time between logins (diagnostics `login_count`, `last_login`); expectation: about one per token lifetime.

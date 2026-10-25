@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-Model-009](ADR-Model-009-device-assignment-with-value-id-prefixes.md)
 
 ## Date
 
@@ -70,3 +70,4 @@ The trade-off is the key: submenu names are German display texts, while ADR-Mode
 
 - [ADR-Model-006: One HA device per Wolf device](ADR-Model-006-device-per-wolf-device.md) — superseded by this ADR
 - [ADR-Model-002: Parameter model and entity mapping](ADR-Model-002-parameter-model-and-entity-mapping.md)
+- [ADR-Model-009](ADR-Model-009-device-assignment-with-value-id-prefixes.md) — supersedes this ADR
