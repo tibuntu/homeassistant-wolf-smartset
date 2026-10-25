@@ -1,6 +1,9 @@
 """Parameter model against the heat-pump description (ADR-Model-011, ADR-Model-010)."""
 
+import logging
 from typing import Any
+
+import pytest
 
 from custom_components.wolf_smartset.model import Kind, parse_description, slugify
 
@@ -144,3 +147,16 @@ def test_number_needs_a_step(description: dict[str, Any]) -> None:
     for descriptor in _descriptors(description, 35000900000):
         descriptor.pop("StepWidth", None)
     assert parse_description(description).parameters[35000900000].kind is Kind.SENSOR
+
+
+def test_tab_without_bundle_id_is_skipped(
+    description: dict[str, Any], caplog: pytest.LogCaptureFixture
+) -> None:
+    """Polling an invented bundle id can lock the account; such tabs contribute nothing."""
+    for tab in description["MenuItems"][0]["TabViews"]:
+        if tab["TabName"] == "Warmwasser":
+            del tab["BundleId"]
+    with caplog.at_level(logging.WARNING):
+        parameters = parse_description(description).parameters
+    assert 35000900000 not in parameters
+    assert "Warmwasser" in caplog.text

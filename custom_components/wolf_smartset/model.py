@@ -7,9 +7,12 @@ from collections import Counter
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import StrEnum
+import logging
 import re
 from typing import Any
 import unicodedata
+
+_LOGGER = logging.getLogger(__name__)
 
 # Values of EnControlType in the portal JavaScript.
 CT_COMBO_IMAGE = 0
@@ -185,6 +188,11 @@ def parse_description(raw: dict[str, Any]) -> Description:
 
     def walk(menu: dict[str, Any], device: str | None) -> None:
         for tab in menu.get("TabViews") or []:
+            if not tab.get("BundleId"):
+                _LOGGER.warning(
+                    "Tab %s has no BundleId, its parameters are skipped", tab.get("TabName")
+                )
+                continue
             for schema in tab.get("SVGHeatingSchemaConfigDevices") or []:
                 for item in schema.get("parameters") or []:
                     if item.get("unit"):
@@ -205,7 +213,7 @@ def parse_description(raw: dict[str, Any]) -> Description:
                     seen_schema.add(descriptor["ParameterId"])
                 occurrence = Occurrence(
                     tab=tab.get("TabName") or "",
-                    bundle_id=int(tab.get("BundleId") or 1000),
+                    bundle_id=int(tab["BundleId"]),
                     expert=bool(tab.get("IsExpertView")),
                     read_only=schema or descriptor.get("IsReadOnly", True) is not False,
                     control_type=int(descriptor.get("ControlType", -1)),
