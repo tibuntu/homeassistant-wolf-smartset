@@ -7,6 +7,7 @@ value at least CONFIRM_AFTER_SECONDS after the write confirms or corrects it.
 
 import asyncio
 from collections.abc import Callable
+from datetime import timedelta
 import math
 import time
 from typing import TYPE_CHECKING, Any
@@ -120,7 +121,6 @@ class WriteManager:
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.history"
         )
         self._lock = asyncio.Lock()
-        self._writes: list[float] = []
         self._pending: dict[tuple[int, int], tuple[float, dict[str, Any]]] = {}
         self._listeners: list[Callable[[], None]] = []
         self.history: list[dict[str, Any]] = []
@@ -134,6 +134,17 @@ class WriteManager:
     def max_writes_per_hour(self) -> int:
         """Rolling one-hour limit for real writes."""
         return int(self._entry.options.get(CONF_MAX_WRITES_PER_HOUR, DEFAULT_MAX_WRITES_PER_HOUR))
+
+    def _writes_last_hour(self) -> int:
+        """Real writes (applied or not) recorded during the last hour."""
+        cutoff = dt_util.utcnow() - timedelta(hours=1)
+        return sum(
+            1
+            for record in self.history
+            if record.get("result") in (RESULT_OK, RESULT_NOT_APPLIED)
+            and (written := dt_util.parse_datetime(record.get("time") or "")) is not None
+            and written >= cutoff
+        )
 
     async def async_load(self) -> None:
         """Restore the history after a restart."""
@@ -188,8 +199,7 @@ class WriteManager:
                 )
                 return await self._record(record, RESULT_DRY_RUN)
             now = time.monotonic()
-            self._writes = [t for t in self._writes if now - t < 3600]
-            if len(self._writes) >= self.max_writes_per_hour:
+            if self._writes_last_hour() >= self.max_writes_per_hour:
                 await self._record(record, RESULT_RATE_LIMITED)
                 raise HomeAssistantError(
                     translation_domain=DOMAIN,
@@ -219,7 +229,6 @@ class WriteManager:
                     translation_key="write_failed",
                     translation_placeholders={"name": parameter.label, "error": str(err)},
                 ) from err
-            self._writes.append(now)
             record["response"] = redact_ids(response)
             # Optimistic: show the new value now; the next poll confirms or corrects it.
             if coordinator.data is not None:

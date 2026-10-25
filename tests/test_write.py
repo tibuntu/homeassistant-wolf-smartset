@@ -498,3 +498,35 @@ def test_same_value_edge_cases(description: dict[str, Any]) -> None:
     assert same_value(setpoint, "50.0", "50") is True
     assert same_value(program, " 1 ", "1") is True
     assert same_value(program, None, "1") is False
+
+
+async def test_rate_limit_survives_reload(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """The hourly budget is counted from the persisted history."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False, CONF_MAX_WRITES_PER_HOUR: 1})
+    await _set_setpoint(hass, 55)
+    await hass.async_block_till_done()
+    assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    with pytest.raises(HomeAssistantError) as err:
+        await _set_setpoint(hass, 56)
+    assert err.value.translation_key == "rate_limited"
+
+
+async def test_rate_limit_ignores_records_without_time(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    hass_storage: dict[str, Any],
+) -> None:
+    """Records written by 0.2.0.dev1 carry no time; they neither count nor crash."""
+    hass_storage[f"{DOMAIN}.{mock_config_entry.entry_id}.history"] = {
+        "version": 1,
+        "key": f"{DOMAIN}.{mock_config_entry.entry_id}.history",
+        "data": {"history": [{"result": "ok", "old": "50", "new": "51"}]},
+    }
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False, CONF_MAX_WRITES_PER_HOUR: 1})
+    await _set_setpoint(hass, 55)
+    assert mock_client.write_value.await_count == 1
