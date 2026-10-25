@@ -5,6 +5,7 @@ import json
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 import pytest
 
+from custom_components.wolf_smartset.entity import parse_number
 from custom_components.wolf_smartset.model import parse_description
 from custom_components.wolf_smartset.sensor import unit_mapping
 
@@ -44,3 +45,11 @@ def test_state_class_of_energy_and_hours(label: str, state_class: SensorStateCla
     device_class, _, actual = unit_mapping(PARAMETERS[label])
     assert actual == state_class
     assert device_class in (SensorDeviceClass.ENERGY, SensorDeviceClass.DURATION)
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"), [("20,5", 20.5), ("20.5", 20.5), ("abc", None), (None, None)]
+)
+def test_parse_number(raw: str | None, expected: float | None) -> None:
+    """Only the conversion; placeholders are filtered by WolfEntity.raw_value."""
+    assert parse_number(raw) == expected

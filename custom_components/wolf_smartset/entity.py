@@ -27,8 +27,8 @@ def system_device_info(coordinator: WolfSystemCoordinator) -> DeviceInfo:
 
 
 def parse_number(raw: str | None) -> float | None:
-    """Portal values are strings; placeholders like '--' mean unknown."""
-    if raw is None or raw.strip() in _EMPTY:
+    """Portal values are strings with '.' or ',' as the decimal separator."""
+    if raw is None:
         return None
     try:
         return float(raw.replace(",", "."))
