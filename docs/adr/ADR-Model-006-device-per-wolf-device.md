@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Superseded by [ADR-Model-007](ADR-Model-007-device-per-expert-submenu.md)
 
 ## Date
 
@@ -66,3 +66,4 @@ Grouping by physical device matches how installers and the Wolf documentation th
 
 - [ADR-Integration-000: Standalone integration](ADR-Integration-000-standalone-integration.md)
 - [ADR-Model-002: Parameter model and entity mapping](ADR-Model-002-parameter-model-and-entity-mapping.md)
+- [ADR-Model-007: One HA device per expert submenu](ADR-Model-007-device-per-expert-submenu.md) — supersedes this ADR
