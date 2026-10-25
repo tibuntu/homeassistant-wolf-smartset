@@ -1,8 +1,8 @@
-"""Write pipeline: every write from entities and undo goes through here (ADR-Writes-012).
+"""Write pipeline: every write from entities and undo goes through here (ADR-Writes-013).
 
 Order: writable check, validation, then under one lock: no-op check, dry run,
-rate limit, API call, optimistic state, history. The next poll confirms or
-corrects the value.
+rate limit, API call, optimistic state, history. The first poll that reads the
+value at least CONFIRM_AFTER_SECONDS after the write confirms or corrects it.
 """
 
 import asyncio
@@ -126,6 +126,11 @@ class WriteManager:
         """Restore the history after a restart."""
         data = await self._store.async_load() or {}
         self.history = data.get("history", [])
+        # Pending confirmations do not survive a restart: record them as unconfirmed.
+        for record in self.history:
+            if record.get("result") == RESULT_OK and record.get("confirmed", False) is None:
+                record["confirmed"] = False
+                record["read_back"] = None
 
     @callback
     def async_add_listener(self, update: Callable[[], None]) -> Callable[[], None]:
@@ -208,25 +213,37 @@ class WriteManager:
             if entity is not None:
                 entity.async_write_ha_state()
             self._pending[(coordinator.system.id, parameter.value_id)] = (now, record)
+            record["confirmed"] = None  # set by the first poll after CONFIRM_AFTER_SECONDS
             return await self._record(record, RESULT_OK)
 
     @callback
     def async_check_pending(self, coordinator: WolfSystemCoordinator) -> None:
-        """After a poll: confirm written values or mark them as not applied."""
+        """After a poll: keep, confirm or correct written values.
+
+        A poll that started before the write or runs right after it may still
+        carry the old value; until CONFIRM_AFTER_SECONDS have passed the written
+        value is put back. Runs before the entities' listeners, so they never
+        show the stale value.
+        """
+        if not coordinator.last_update_success or coordinator.data is None:
+            return
         changed = False
         now = time.monotonic()
         for key in [k for k in self._pending if k[0] == coordinator.system.id]:
             written_at, record = self._pending[key]
-            if now - written_at < CONFIRM_AFTER_SECONDS:
+            value_id = key[1]
+            if now - written_at < CONFIRM_AFTER_SECONDS or value_id not in coordinator.polled:
+                coordinator.data[value_id] = record["new"]
                 continue
             del self._pending[key]
             parameter = coordinator.description.parameters.get(record["parameter_id"])
-            current = (coordinator.data or {}).get(key[1])
-            if parameter is not None and same_value(parameter, current, record["new"]):
-                record["confirmed"] = True
-            else:
+            current = coordinator.data.get(value_id)
+            record["read_back"] = current
+            record["confirmed"] = parameter is not None and same_value(
+                parameter, current, record["new"]
+            )
+            if not record["confirmed"]:
                 record["result"] = RESULT_NOT_APPLIED
-                record["read_back"] = current
                 LOGGER.warning(
                     "%s was written as %s but reads %s: the controller did not apply it",
                     record["label"],

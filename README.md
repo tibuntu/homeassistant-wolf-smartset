@@ -20,14 +20,14 @@ The setting only applies when an entity is created. Installations that already r
 
 ## Writing
 
-Every write ends up in the non-volatile memory (EEPROM) of the Wolf controller. The integration therefore runs every change through one pipeline ([ADR-Writes-012](docs/adr/ADR-Writes-012-write-pipeline.md)):
+Every write ends up in the non-volatile memory (EEPROM) of the Wolf controller. The integration therefore runs every change through one pipeline ([ADR-Writes-013](docs/adr/ADR-Writes-013-write-pipeline-with-explicit-confirmation.md)):
 
 - **Dry run, on by default.** Changes are only logged at INFO with parameter, old and new value. Switch it off under Settings › Devices & services › Wolf SmartSet › Configure.
 - **No-op suppression.** A value that is already set is not sent again.
 - **Validation** against min, max, step and list options from the Wolf description; read-only parameters and accounts without write access are refused.
 - **Rate limit**, 20 writes per hour by default, configurable.
 - **One write at a time.**
-- **Optimistic state** with correction: the new value shows immediately; if the next poll reads a different value, the integration shows the real one and logs a warning.
+- **Optimistic state** with confirmation: the new value shows immediately and is kept for 30 s, even if a poll still returns the old value. The first poll after that confirms it (`confirmed: true`) or shows the real value, records `confirmed: false` with the value read back, and logs a warning.
 - **History** of the last 200 attempts in `.storage`, the last 50 in the diagnostics; an **Undo last change** button.
 
 Writing uses the same unofficial interface as the SmartSet portal. Wolf does not support third-party access. Wrong settings, in particular expert parameters, can make the system inefficient or uncomfortable. Use at your own risk.

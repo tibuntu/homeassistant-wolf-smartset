@@ -234,9 +234,49 @@ async def test_next_poll_confirms_or_corrects(
     await hass.async_block_till_done()
 
     record = _history(mock_config_entry)[-1]
-    assert record["result"] == result
-    assert record.get("confirmed", False) is (result == "ok")
+    assert (record["result"], record["confirmed"], record["read_back"]) == (
+        result,
+        result == "ok",
+        read_back,
+    )
     assert hass.states.get(_entity_id(hass, "number", DHW_SETPOINT)).state == f"{read_back}.0"
+
+
+async def test_early_poll_keeps_the_written_value(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """A poll within 30 s (or in flight during the write) may still read the old value."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    await _set_setpoint(hass, 55)
+    assert _history(mock_config_entry)[-1]["confirmed"] is None
+
+    coordinator = mock_config_entry.runtime_data.coordinators[1234]
+    await coordinator.async_refresh()  # the fake portal still returns 50
+
+    assert hass.states.get(_entity_id(hass, "number", DHW_SETPOINT)).state == "55.0"
+    assert _history(mock_config_entry)[-1]["confirmed"] is None
+    await _set_setpoint(hass, 55)  # no-op: the written value is still the known one
+    assert mock_client.write_value.await_count == 1
+
+
+async def test_restart_marks_pending_writes_unconfirmed(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    hass_storage: dict[str, Any],
+) -> None:
+    """A confirmation lost by a restart is recorded as confirmed: false."""
+    hass_storage[f"{DOMAIN}.{mock_config_entry.entry_id}.history"] = {
+        "version": 1,
+        "key": f"{DOMAIN}.{mock_config_entry.entry_id}.history",
+        "data": {"history": [{"result": "ok", "confirmed": None, "old": "0", "new": "1"}]},
+    }
+    await _setup(hass, mock_config_entry)
+    assert _history(mock_config_entry)[-1]["confirmed"] is False
+    assert _history(mock_config_entry)[-1]["read_back"] is None
 
 
 async def test_undo_restores_previous_value(

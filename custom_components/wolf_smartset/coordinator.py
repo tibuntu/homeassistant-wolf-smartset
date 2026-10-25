@@ -94,6 +94,8 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
         self.system = system
         self.access_level: int | None = None
         self.unreadable: set[int] = set()
+        # Value ids read with State OK by the last successful poll.
+        self.polled: set[int] = set()
         self.backoff_steps = 0
         self._started_bundles: set[int] = set()
         self._description_loaded = dt_util.utcnow()
@@ -144,17 +146,20 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
                 bundles.setdefault(parameter.bundle_id, []).append(parameter.value_id)
 
         data = dict(self.data or {})
+        polled: set[int] = set()
         received = False
         for bundle_id, value_ids in bundles.items():
             for value in await self._read_bundle(bundle_id, sorted(value_ids)):
                 received = True
                 if value.state == STATE_OK and value.value is not None:
                     data[value.value_id] = value.value
+                    polled.add(value.value_id)
                 elif value.state in (STATE_TIMEOUT, STATE_ERROR):
                     data[value.value_id] = None
         if bundles and not received:
             # ioBroker saw throttling as empty answers rather than errors.
             raise TooManyRequests("all value requests returned empty")
+        self.polled = polled
         return data
 
     async def _read_bundle(self, bundle_id: int, value_ids: list[int]) -> list[Value]:

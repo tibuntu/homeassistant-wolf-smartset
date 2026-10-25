@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-Writes-013](ADR-Writes-013-write-pipeline-with-explicit-confirmation.md)
 
 ## Date
 
@@ -90,3 +90,4 @@ A global dry-run option, on by default, makes every new installation and every d
 - [ADR-Writes-004: Write confirmation instead of optimistic state](ADR-Writes-004-write-confirmation-and-rejected-writes.md) — superseded by this ADR
 - [ADR-Writes-005: Write safety guards and services](ADR-Writes-005-write-safety-guards-and-services.md) — superseded by this ADR
 - [ADR-Model-011: Parameter model, entity mapping and naming](ADR-Model-011-parameter-model-entity-mapping-and-naming.md)
+- [ADR-Writes-013: Write pipeline with explicit confirmation](ADR-Writes-013-write-pipeline-with-explicit-confirmation.md) — supersedes this ADR
