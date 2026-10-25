@@ -76,6 +76,36 @@ def redact_description(data: Any) -> Any:
     return result
 
 
+def secret_value_ids(description: Any) -> set[int]:
+    """ValueIds whose values identify the installation (serials, addresses, dates, times)."""
+    found: set[int] = set()
+
+    def walk(node: Any) -> None:
+        if isinstance(node, list):
+            for item in node:
+                walk(item)
+        elif isinstance(node, dict):
+            if "ValueId" in node and (
+                node.get("ControlType") in SECRET_CONTROL_TYPES
+                or SECRET_PARAMETER.search(str(node.get("Name") or ""))
+            ):
+                found.add(node["ValueId"])
+            for value in node.values():
+                walk(value)
+
+    walk(description)
+    return found
+
+
+def redact_values(values: dict[str, Any], secret_ids: set[int]) -> dict[str, Any]:
+    """Redact identifiers and blank the values of secret parameters."""
+    result = redact_ids(values)
+    for item in result.get("Values") or []:
+        if item.get("ValueId") in secret_ids and item.get("Value") is not None:
+            item["Value"] = REDACTED
+    return result
+
+
 async def record(target: Path) -> None:
     """Fetch, redact and store the responses."""
     username = os.environ.get("WOLF_USERNAME") or input("Wolf SmartSet username: ")
@@ -115,7 +145,10 @@ async def record(target: Path) -> None:
                         "GuiIdChanged": True,
                     },
                 )
-                write(target / f"values_{index}.json", redact_ids(raw_values))
+                write(
+                    target / f"values_{index}.json",
+                    redact_values(raw_values, secret_value_ids(description)),
+                )
                 print(
                     f"system {index}: {len(model.parameters)} parameters, "
                     f"{len(user_level)} user-level values requested, "
