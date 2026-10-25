@@ -557,3 +557,24 @@ Die wichtigsten Befunde:
 ```
 
 Abgedeckt sind auf dieser Anlage elf ValueIds unter „Heizgerät“ und drei unter „Mischermodul MM1“, genau die Ports der Übersicht. Damit erhalten die Übersichts-Ports Gerät, Einheit und Klartext-Werte aus den Daten (ADR-Model-010, ADR-Model-011). `PortDesc` minus `PortName` ergibt die Funktion: „Mischerkreispumpe“ ist zugleich der Name des Tab-Parameters `4007000001`, „Ausgang MKP“ ist also ein Duplikat und startet deaktiviert.
+
+## 14. Nachtrag 2026-10-25: Verhalten von „1x Warmwasser“ (22004200000)
+
+Quelle: erster echter Write-Test am 25.10.2026 (Freigabe des Eigentümers), Write-Historie der Integration und HA-Recorder. Uhrzeiten MEZ, Poll-Intervall 120 s.
+
+| Zeit | Ereignis |
+|---|---|
+| 17:56:20 | 3-Wege-Umschaltventil HZ/WW auf „Warmwasser“, „Warmwasser Status“ = „Ein“ (5). Die Ladung läuft bereits über das normale Programm (Speicher 26 °C, Soll 48 °C). |
+| 18:04:50 | Write 22004200000 = 1. Antwort des Portals ohne Fehler. |
+| 18:06:27 | Poll: 22004200000 = 1, „Warmwasser Status“ = „1x Warmwasser“ (4). Bestätigt. |
+| 18:12:13 | Write 22004200000 = 0 gestartet; die Antwort kam erst nach rund 17 s (Schalter-Zustand ab 18:12:30). |
+| 18:12:29 | Poll, der **während** des Writes lief: noch 1 und „1x Warmwasser“. |
+| 18:14:29 | Erster Poll nach dem Write: 22004200000 = 0, „Warmwasser Status“ = „Ein“ (5). Bestätigt. |
+| bis 18:18 | Speichertemperatur steigt weiter (31,5 → 32,6 °C), Ventil weiter auf „Warmwasser“. |
+
+**Ergebnis:**
+
+1. Der Parameter ist lesbar und beschreibbar. Das Portal bietet ihn als Liste „Aus“/„Ein“ an (`ControlType 1`) und beschreibt ihn so: „Der Warmwasserspeicher wird für eine Stunde auf die eingestellte Warmwassertemperatur aufgeheizt.“
+2. Schreiben von 0 beendet die 1x-Funktion: Der Status wechselt von „1x Warmwasser“ zurück auf „Ein“. Dass die Ladung danach weiterlief, liegt an der normalen Warmwasser-Anforderung. Sie lief schon vor dem Test, also gibt der Test keinen Beleg, dass 1x überhaupt eine Ladung ausgelöst hat.
+3. Die Meldung „weiterhin 1x Warmwasser“ nach dem Ausschalten stammt vom Poll, der während des 17 s langen Writes lief. Seit 0.2.0 behält die Integration den geschriebenen Wert bei Polls in den ersten 30 s (ADR-Writes-013).
+4. **Offen:** Ob sich 22004200000 nach einer Stunde oder nach Erreichen der Solltemperatur selbst auf 0 zurücksetzt, ist nicht beobachtet. Der Test dafür braucht einen Write: einschalten bei geladenem Speicher und ohne weiteres Eingreifen über mehr als eine Stunde pollen. Bis dahin bleibt der Parameter ein `switch`: Er hat einen lesbaren Zustand, der sich abbrechen lässt. Ein `button` würde das Abbrechen verlieren.

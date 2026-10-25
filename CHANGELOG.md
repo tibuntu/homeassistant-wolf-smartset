@@ -4,7 +4,7 @@
 
 ### Added
 
-- **Writing** for `number`, `select` and the "1x Warmwasser" switch, through one pipeline with dry run (on by default), no-op suppression, validation, access-level check, rate limit (20 per hour, configurable), lock, optimistic state with correction after the next poll, and a persistent history ([ADR-Writes-012](docs/adr/ADR-Writes-012-write-pipeline.md)).
+- **Writing** for `number`, `select` and the "1x Warmwasser" switch, through one pipeline with dry run (on by default), no-op suppression, validation, access-level check, rate limit (20 per hour, configurable), lock, optimistic state and a persistent history ([ADR-Writes-013](docs/adr/ADR-Writes-013-write-pipeline-with-explicit-confirmation.md)). The written value is kept for 30 s, even if a poll that ran during or right after the write still returns the old value. The first poll after that confirms or corrects it. Every applied write records `confirmed` (`null` while pending, `true` or `false`) and `read_back`.
 - **Undo last change** button.
 - **Write history in the diagnostics** (last 50 attempts with result).
 - Options "Dry run" and "Maximum writes per hour".
@@ -20,7 +20,13 @@
 - **Device assignment.** Devices come only from data that names them: the expert submenu, the device schema configuration or `ProtGrp` ([ADR-Model-010](docs/adr/ADR-Model-010-device-assignment-from-data-evidence.md)). The overview schema ports move to the heat generator or the mixer module. The user-level controls for heating and DHW, including "1x Warmwasser", stay on the system device, because no data names a module for them ([discovery, sections 12 and 13](docs/discovery.md)). Entity IDs, unique IDs and history are unchanged; only the device changes.
 - **Overview schema ports show text values.** "Mischermotor" shows Aus/Zu/Auf and "Ausgang MKP" Aus/Ein instead of raw numbers; list items and units come from the device schema configuration. Their names change from "Mischermotor MM" and "MKP Mischerkreispumpe" to the Wolf labels "Mischermotor" and "Ausgang MKP".
 - **Names.** All entities use the Wolf labels ([ADR-Model-011](docs/adr/ADR-Model-011-parameter-model-entity-mapping-and-naming.md)). "One-time DHW charge" is now "1x Warmwasser"; its entity ID `switch.<system>_one_time_dhw_charge` stays. Labels are unique per system, so a few friendly names gain a suffix, for example "Außentemperatur (Heizung)". No entity ID changes.
-- **Entities disabled by default** for new installations: overview schema ports that duplicate a tab parameter ("Ausgang MKP"), statistics that need an S0 electricity meter, and "Raumtemperatur" (see [README](README.md#entities-disabled-by-default)). "Verdichterfrequenz" and "Mischermotor" stay enabled.
+- **Entities disabled by default** for new installations. Complete list for the recorded heat pump with BM-2 and MM1, checked by `tests/test_real_fixtures.py::test_disabled_by_default_on_new_installation`:
+  - all 168 parameters from the expert menu ("Fachmann"), as before;
+  - "Ausgang MKP": overview schema port that duplicates the tab parameter "Mischerkreispumpe", which stays enabled;
+  - statistics that need an S0 electricity meter: "Verbrauch Vortag", "Verbrauch aktueller Monat", "Verbrauch aktuelles Jahr", "Verbrauch Vorjahr", "Verbrauch Vorvorjahr", "TAZ Vortag", "MAZ aktueller Monat", "JAZ aktuelles Jahr", "JAZ Vorjahr", "JAZ Vorvorjahr";
+  - "Raumtemperatur" (only with a room sensor).
+
+  "Verdichterfrequenz" and "Mischermotor" stay enabled. Other installations follow the same rules ([README](README.md#entities-disabled-by-default)).
 
 ### Upgrade notes
 
@@ -31,7 +37,7 @@
 - JAZ aktuelles Jahr, JAZ Vorjahr, JAZ Vorvorjahr, MAZ aktueller Monat, TAZ Vortag
 - Raumtemperatur
 
-Recommendation: disable the ones without data under Settings › Devices & services › Wolf SmartSet › Entities, or remove and re-add the integration. Re-adding deletes the integration's entities and devices together with their history.
+Removing and re-adding the integration does **not** change this. Home Assistant keeps deleted registry entries for 30 days and restores their settings, including "enabled", when the same entity comes back. Disable the ones without data by hand under Settings › Devices & services › Wolf SmartSet › Entities.
 
 **Orphaned registry entries: none expected, no cleanup built in.** This release removes no entity. Schema ports and meter statistics are only disabled by default, not filtered out, so every unique ID from 0.1.0 is still provided. We therefore did not add an automatic registry cleanup. Deleting registry entries automatically could also remove entities a user still references, if a parameter disappears only temporarily from Wolf's description. Should a future Wolf change remove parameters, Home Assistant marks those entities as "no longer provided", and you can delete them in the entity settings. We will revisit automatic cleanup (Quality Scale rule `stale-devices`) if that happens.
 
