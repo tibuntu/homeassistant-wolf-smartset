@@ -2,6 +2,13 @@
 
 ## Unreleased (planned as 0.2.0)
 
+### Added
+
+- **Writing** for `number`, `select` and the "1x Warmwasser" switch, through one pipeline with dry run (on by default), no-op suppression, validation, access-level check, rate limit (20 per hour, configurable), lock, optimistic state with correction after the next poll, and a persistent history ([ADR-Writes-012](docs/adr/ADR-Writes-012-write-pipeline.md)).
+- **Undo last change** button.
+- **Write history in the diagnostics** (last 50 attempts with result).
+- Options "Dry run" and "Maximum writes per hour".
+
 ### Fixed
 
 - **No more Home Assistant warnings at setup.** The integration uses its own HTTP client and closes only that one. Sub-devices link to the system device through `via_device_id`; `via_device` stops working in Home Assistant 2027.8.

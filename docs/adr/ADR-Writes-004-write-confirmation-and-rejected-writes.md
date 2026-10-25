@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-Writes-012](ADR-Writes-012-write-pipeline.md)
 
 ## Date
 
@@ -74,3 +74,4 @@ A 5 s interval with a 60 s limit costs at most 12 small reads per write. With th
 
 - [ADR-Writes-005: Write safety guards and services](ADR-Writes-005-write-safety-guards-and-services.md)
 - [ADR-Polling-003: Polling strategy](ADR-Polling-003-polling-strategy.md)
+- [ADR-Writes-012: Write pipeline](ADR-Writes-012-write-pipeline.md) — supersedes this ADR

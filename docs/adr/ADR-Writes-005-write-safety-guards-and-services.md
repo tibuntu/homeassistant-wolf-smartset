@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-Writes-012](ADR-Writes-012-write-pipeline.md)
 
 ## Date
 
@@ -75,3 +75,4 @@ Restricting services to undo and snapshots follows the Core review: everything e
 
 - [ADR-Writes-004: Write confirmation](ADR-Writes-004-write-confirmation-and-rejected-writes.md)
 - [ADR-Model-002: Parameter model and entity mapping](ADR-Model-002-parameter-model-and-entity-mapping.md)
+- [ADR-Writes-012: Write pipeline](ADR-Writes-012-write-pipeline.md) — supersedes this ADR
