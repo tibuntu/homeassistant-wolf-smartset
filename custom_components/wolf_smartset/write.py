@@ -89,7 +89,7 @@ def validate(parameter: Parameter, target: str, access_level: int | None) -> Non
     if not parameter.writable or parameter.kind not in (Kind.NUMBER, Kind.SELECT, Kind.SWITCH):
         raise _error("not_writable", name=parameter.label)
     required = ACCESS_EXPERT_WRITE if parameter.expert else ACCESS_USER_WRITE
-    if access_level is not None and access_level < required:
+    if access_level is None or access_level < required:
         raise _error("access_denied", name=parameter.label)
     if parameter.kind is not Kind.NUMBER:
         if target not in parameter.selectable:

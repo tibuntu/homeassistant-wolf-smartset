@@ -147,13 +147,15 @@ async def test_validation_before_sending(
     mock_client.write_value.assert_not_called()
 
 
+@pytest.mark.parametrize("level", [1, None])
 async def test_access_level_is_respected(
     hass: HomeAssistant,
     mock_client: MagicMock,
     mock_config_entry: MockConfigEntry,
+    level: int | None,
 ) -> None:
-    """An account with read-only access cannot write."""
-    mock_client.get_system_state.return_value = SystemState(True, 1)
+    """A read-only account, or one whose level is unknown, cannot write."""
+    mock_client.get_system_state.return_value = SystemState(True, level)
     await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
     with pytest.raises(ServiceValidationError) as err:
         await _set_setpoint(hass, 55)
