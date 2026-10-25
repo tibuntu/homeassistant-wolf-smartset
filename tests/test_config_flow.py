@@ -1,0 +1,105 @@
+"""Config flow, reauth and options."""
+
+from unittest.mock import MagicMock
+
+from homeassistant.config_entries import SOURCE_USER
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
+import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from custom_components.wolf_smartset.api import AuthError, PortalUnavailable, System
+from custom_components.wolf_smartset.const import CONF_SCAN_INTERVAL, CONF_SYSTEMS, DOMAIN
+
+from .conftest import SYSTEM
+
+USER_INPUT = {CONF_USERNAME: "User@Example.com", CONF_PASSWORD: "secret"}
+
+
+async def test_single_system(hass: HomeAssistant, mock_client: MagicMock) -> None:
+    """One system: the entry is created right away."""
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["result"].unique_id == "user@example.com"
+    assert result["data"][CONF_SYSTEMS] == [
+        {"id": 1234, "gateway_id": 5678, "name": "Home", "share_id": None}
+    ]
+
+
+async def test_system_selection(hass: HomeAssistant, mock_client: MagicMock) -> None:
+    """Several systems: the user picks a subset."""
+    mock_client.get_systems.return_value = [SYSTEM, System(99, 98, "Cabin", 7)]
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
+    assert result["step_id"] == "systems"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SYSTEMS: ["99"]}
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert [s["id"] for s in result["data"][CONF_SYSTEMS]] == [99]
+
+
+@pytest.mark.parametrize(
+    ("error", "key"),
+    [(AuthError("x"), "invalid_auth"), (PortalUnavailable("x"), "portal_unavailable")],
+)
+async def test_errors_recover(
+    hass: HomeAssistant, mock_client: MagicMock, error: Exception, key: str
+) -> None:
+    """Errors are shown and the user can retry."""
+    mock_client.get_systems.side_effect = error
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
+    assert result["errors"] == {"base": key}
+    mock_client.get_systems.side_effect = None
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+
+
+async def test_password_too_long(hass: HomeAssistant, mock_client: MagicMock) -> None:
+    """The portal truncates passwords longer than 30 characters."""
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_USERNAME: "u", CONF_PASSWORD: "x" * 31}
+    )
+    assert result["errors"] == {CONF_PASSWORD: "password_too_long"}
+    mock_client.get_systems.assert_not_called()
+
+
+async def test_already_configured(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """One entry per account."""
+    mock_config_entry.add_to_hass(hass)
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
+    assert result["reason"] == "already_configured"
+
+
+async def test_reauth(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """A new password is verified and stored."""
+    mock_config_entry.add_to_hass(hass)
+    result = await mock_config_entry.start_reauth_flow(hass)
+    assert result["step_id"] == "reauth_confirm"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_PASSWORD: "new"}
+    )
+    assert result["reason"] == "reauth_successful"
+    assert mock_config_entry.data[CONF_PASSWORD] == "new"
+
+
+async def test_options(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """Poll interval option."""
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {CONF_SCAN_INTERVAL: 300}
+    )
+    assert mock_config_entry.options == {CONF_SCAN_INTERVAL: 300}

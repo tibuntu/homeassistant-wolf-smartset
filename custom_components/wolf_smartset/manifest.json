@@ -1,0 +1,14 @@
+{
+  "domain": "wolf_smartset",
+  "name": "Wolf SmartSet (read/write)",
+  "codeowners": ["@tibuntu"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/tibuntu/homeassistant-wolf-smartset",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/tibuntu/homeassistant-wolf-smartset/issues",
+  "loggers": ["custom_components.wolf_smartset"],
+  "requirements": [],
+  "version": "0.1.0"
+}

@@ -1,0 +1,78 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wolf SmartSet account",
+        "description": "Uses the same unofficial cloud interface as the SmartSet portal. Disable the core Wolf SmartSet Service integration for this account to avoid duplicate logins.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        },
+        "data_description": {
+          "username": "The username of your Wolf SmartSet account.",
+          "password": "The password of your Wolf SmartSet account (at most 30 characters)."
+        }
+      },
+      "systems": {
+        "title": "Select systems",
+        "data": {
+          "systems": "Systems"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Wolf SmartSet",
+        "description": "Wolf SmartSet rejected the password of {username}.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid username or password.",
+      "cannot_connect": "Failed to connect to Wolf SmartSet.",
+      "portal_unavailable": "The Wolf SmartSet portal is unavailable or temporarily blocks this IP address. Try again in an hour.",
+      "password_too_long": "Wolf SmartSet accepts at most 30 characters.",
+      "no_system_selected": "Select at least one system.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This account is already configured.",
+      "no_systems": "The account has no Wolf systems.",
+      "reauth_successful": "Re-authentication was successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Poll interval"
+        },
+        "data_description": {
+          "scan_interval": "Seconds between polls. Wolf allows at most one poll per minute."
+        }
+      }
+    }
+  },
+  "entity": {
+    "switch": {
+      "dhw_once": {
+        "name": "One-time DHW charge"
+      }
+    }
+  },
+  "exceptions": {
+    "writes_not_available": {
+      "message": "Writing is not available yet. This version of the integration is read-only."
+    }
+  },
+  "issues": {
+    "throttled": {
+      "title": "Wolf SmartSet throttles {system}",
+      "description": "Wolf SmartSet answered several polls with throttling or empty responses. The integration polls less often until the portal answers again. Check that no other client logs in with this account from your network."
+    },
+    "wolflink_active": {
+      "title": "Core Wolf SmartSet Service integration is active",
+      "description": "The core Wolf SmartSet Service integration is loaded as well. Both log in from the same IP address, which can make Wolf block the address for up to an hour, including the SmartSet app. Disable the core integration if it uses the same account."
+    }
+  }
+}
