@@ -1,7 +1,6 @@
 {
   "domain": "wolf_smartset",
   "name": "Wolf SmartSet (read/write)",
-  "categories": ["climate.thermostats_heating", "climate.heat_pumps_air_conditioning"],
   "codeowners": ["@tibuntu"],
   "config_flow": true,
   "dependencies": [],
