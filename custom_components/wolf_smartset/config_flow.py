@@ -13,6 +13,7 @@ from homeassistant.config_entries import (
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -35,8 +36,12 @@ from .api import (
     WolfError,
 )
 from .const import (
+    CONF_DRY_RUN,
+    CONF_MAX_WRITES_PER_HOUR,
     CONF_SCAN_INTERVAL,
     CONF_SYSTEMS,
+    DEFAULT_DRY_RUN,
+    DEFAULT_MAX_WRITES_PER_HOUR,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     LOGGER,
@@ -181,21 +186,24 @@ class WolfSmartsetConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class WolfSmartsetOptionsFlow(OptionsFlowWithReload):
-    """Poll interval, at least 60 s (ADR-Polling-003)."""
+    """Poll interval (ADR-Polling-003), dry run and write rate limit (ADR-Writes-012)."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Show the options form."""
         if user_input is not None:
             return self.async_create_entry(
-                data={CONF_SCAN_INTERVAL: int(user_input[CONF_SCAN_INTERVAL])}
+                data={
+                    CONF_SCAN_INTERVAL: int(user_input[CONF_SCAN_INTERVAL]),
+                    CONF_DRY_RUN: bool(user_input[CONF_DRY_RUN]),
+                    CONF_MAX_WRITES_PER_HOUR: int(user_input[CONF_MAX_WRITES_PER_HOUR]),
+                }
             )
+        options = self.config_entry.options
         schema = probatio.Schema(
             {
                 probatio.Required(
                     CONF_SCAN_INTERVAL,
-                    default=self.config_entry.options.get(
-                        CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
-                    ),
+                    default=options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
                 ): NumberSelector(
                     NumberSelectorConfig(
                         min=MIN_SCAN_INTERVAL,
@@ -204,7 +212,16 @@ class WolfSmartsetOptionsFlow(OptionsFlowWithReload):
                         mode=NumberSelectorMode.BOX,
                         unit_of_measurement="s",
                     )
-                )
+                ),
+                probatio.Required(
+                    CONF_DRY_RUN, default=options.get(CONF_DRY_RUN, DEFAULT_DRY_RUN)
+                ): BooleanSelector(),
+                probatio.Required(
+                    CONF_MAX_WRITES_PER_HOUR,
+                    default=options.get(CONF_MAX_WRITES_PER_HOUR, DEFAULT_MAX_WRITES_PER_HOUR),
+                ): NumberSelector(
+                    NumberSelectorConfig(min=1, max=60, step=1, mode=NumberSelectorMode.BOX)
+                ),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

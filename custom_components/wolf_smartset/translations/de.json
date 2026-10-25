@@ -1,0 +1,51 @@
+{
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Abfrageintervall",
+          "dry_run": "Probelauf (nicht schreiben)",
+          "max_writes_per_hour": "Maximale Schreibvorgänge pro Stunde"
+        },
+        "data_description": {
+          "scan_interval": "Sekunden zwischen zwei Abfragen. Wolf erlaubt höchstens eine Abfrage pro Minute.",
+          "dry_run": "Solange aktiv, werden Änderungen nur protokolliert (INFO) mit Parameter, altem und neuem Wert; an die Heizung wird nichts gesendet.",
+          "max_writes_per_hour": "Schützt das EEPROM der Regelung vor Automationsschleifen. Übersprungene Schreibvorgänge mit unverändertem Wert zählen nicht."
+        }
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "undo": {
+        "name": "Letzte Änderung rückgängig"
+      }
+    }
+  },
+  "exceptions": {
+    "not_writable": {
+      "message": "{name} ist nicht beschreibbar."
+    },
+    "access_denied": {
+      "message": "Das Wolf-SmartSet-Konto hat für {name} kein Schreibrecht."
+    },
+    "invalid_option": {
+      "message": "{value} ist keine gültige Auswahl für {name}."
+    },
+    "out_of_range": {
+      "message": "{value} liegt außerhalb des Bereichs von {name} ({min} bis {max})."
+    },
+    "invalid_step": {
+      "message": "{value} passt nicht zur Schrittweite {step} von {name}."
+    },
+    "rate_limited": {
+      "message": "Grenze von {limit} Schreibvorgängen pro Stunde erreicht. Die Grenze lässt sich in den Optionen der Integration ändern."
+    },
+    "write_failed": {
+      "message": "Schreiben von {name} fehlgeschlagen: {error}"
+    },
+    "nothing_to_undo": {
+      "message": "Es gibt keine übernommene Änderung zum Rückgängigmachen."
+    }
+  }
+}

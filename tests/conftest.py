@@ -80,6 +80,7 @@ def mock_client(description: dict[str, Any]) -> Generator[MagicMock]:
             side_effect=lambda system, bundle, ids, first=False: [Value(i, SEED[i], 1) for i in ids]
         )
         client.close = AsyncMock()
+        client.write_value = AsyncMock(return_value={})
         client.login_count = 1
         client.last_login = None
         yield client

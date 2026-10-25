@@ -26,6 +26,15 @@ async def async_get_config_entry_diagnostics(
             "login_count": runtime.client.login_count,
             "last_login": runtime.client.last_login and runtime.client.last_login.isoformat(),
         },
+        "writes": {
+            "dry_run": runtime.writer.dry_run,
+            "max_writes_per_hour": runtime.writer.max_writes_per_hour,
+            # Last 50 attempts; the system id is dropped like everywhere else.
+            "history": [
+                {k: v for k, v in record.items() if k != "system_id"}
+                for record in runtime.writer.history[-50:]
+            ],
+        },
         "systems": [
             {
                 "access_level": c.access_level,

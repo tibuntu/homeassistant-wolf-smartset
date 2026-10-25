@@ -35,5 +35,7 @@ class WolfSelect(WolfEntity, SelectEntity):
         return text if text in self._attr_options else None
 
     async def async_select_option(self, option: str) -> None:
-        """Writing arrives in Phase 3."""
-        self._raise_read_only()
+        """Write the list value behind the display text."""
+        options = self.parameter.options
+        value = next((v for v in self.parameter.selectable if options[v] == option), option)
+        await self._async_write(value)

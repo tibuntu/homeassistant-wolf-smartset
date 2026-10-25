@@ -8,6 +8,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from .coordinator import WolfConfigEntry, WolfSystemCoordinator
 from .entity import WolfEntity, add_entities, parse_number
 from .model import Kind, Parameter
+from .write import format_number
 
 PARALLEL_UPDATES = 1
 
@@ -46,5 +47,5 @@ class WolfNumber(WolfEntity, NumberEntity):
         return parse_number(self.raw_value)
 
     async def async_set_native_value(self, value: float) -> None:
-        """Writing arrives in Phase 3."""
-        self._raise_read_only()
+        """Write the new setting."""
+        await self._async_write(format_number(value))

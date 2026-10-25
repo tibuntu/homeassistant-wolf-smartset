@@ -10,7 +10,13 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.wolf_smartset.api import AuthError, PortalUnavailable, System
-from custom_components.wolf_smartset.const import CONF_SCAN_INTERVAL, CONF_SYSTEMS, DOMAIN
+from custom_components.wolf_smartset.const import (
+    CONF_DRY_RUN,
+    CONF_MAX_WRITES_PER_HOUR,
+    CONF_SCAN_INTERVAL,
+    CONF_SYSTEMS,
+    DOMAIN,
+)
 
 from .conftest import SYSTEM
 
@@ -100,6 +106,11 @@ async def test_options(
     await hass.config_entries.async_setup(mock_config_entry.entry_id)
     result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], {CONF_SCAN_INTERVAL: 300}
+        result["flow_id"],
+        {CONF_SCAN_INTERVAL: 300, CONF_DRY_RUN: False, CONF_MAX_WRITES_PER_HOUR: 5},
     )
-    assert mock_config_entry.options == {CONF_SCAN_INTERVAL: 300}
+    assert mock_config_entry.options == {
+        CONF_SCAN_INTERVAL: 300,
+        CONF_DRY_RUN: False,
+        CONF_MAX_WRITES_PER_HOUR: 5,
+    }

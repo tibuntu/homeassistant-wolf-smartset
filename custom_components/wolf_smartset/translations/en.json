@@ -45,17 +45,42 @@
     "step": {
       "init": {
         "data": {
-          "scan_interval": "Poll interval"
+          "scan_interval": "Poll interval",
+          "dry_run": "Dry run (do not write)",
+          "max_writes_per_hour": "Maximum writes per hour"
         },
         "data_description": {
-          "scan_interval": "Seconds between polls. Wolf allows at most one poll per minute."
+          "scan_interval": "Seconds between polls. Wolf allows at most one poll per minute.",
+          "dry_run": "While on, changes are only logged (INFO) with parameter, old and new value; nothing is sent to the heating system.",
+          "max_writes_per_hour": "Protects the controller's EEPROM against automation loops. Writes that are skipped because the value is already set do not count."
         }
       }
     }
   },
   "exceptions": {
-    "writes_not_available": {
-      "message": "Writing is not available yet. This version of the integration is read-only."
+    "not_writable": {
+      "message": "{name} cannot be written."
+    },
+    "access_denied": {
+      "message": "The Wolf SmartSet account has no write access for {name}."
+    },
+    "invalid_option": {
+      "message": "{value} is not a valid option for {name}."
+    },
+    "out_of_range": {
+      "message": "{value} is outside the range of {name} ({min} to {max})."
+    },
+    "invalid_step": {
+      "message": "{value} does not match the step {step} of {name}."
+    },
+    "rate_limited": {
+      "message": "Write limit of {limit} per hour reached. Change the limit in the integration options."
+    },
+    "write_failed": {
+      "message": "Writing {name} failed: {error}"
+    },
+    "nothing_to_undo": {
+      "message": "There is no applied change to undo."
     }
   },
   "issues": {
@@ -66,6 +91,13 @@
     "wolflink_active": {
       "title": "Core Wolf SmartSet Service integration is active",
       "description": "The core Wolf SmartSet Service integration is loaded as well. Both log in from the same IP address, which can make Wolf block the address for up to an hour, including the SmartSet app. Disable the core integration if it uses the same account."
+    }
+  },
+  "entity": {
+    "button": {
+      "undo": {
+        "name": "Undo last change"
+      }
     }
   }
 }

@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -38,6 +38,9 @@ from .const import (
 )
 from .model import Description, parse_description
 
+if TYPE_CHECKING:
+    from .write import WriteManager
+
 
 def create_http_client() -> httpx.AsyncClient:
     """Own HTTP client with HA's SSL context and user agent.
@@ -58,6 +61,7 @@ class WolfRuntimeData:
     http: httpx.AsyncClient
     client: WolfClient
     coordinators: dict[int, WolfSystemCoordinator]
+    writer: WriteManager
 
 
 type WolfConfigEntry = ConfigEntry[WolfRuntimeData]

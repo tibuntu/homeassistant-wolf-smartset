@@ -1,5 +1,7 @@
 """Wolf SmartSet (read/write) integration."""
 
+from functools import partial
+
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
@@ -14,9 +16,11 @@ from .coordinator import (
     create_http_client,
 )
 from .entity import system_device_info
+from .write import WriteManager
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
+    Platform.BUTTON,
     Platform.NUMBER,
     Platform.SELECT,
     Platform.SENSOR,
@@ -46,7 +50,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> bool
         )
     _check_wolflink(hass)
 
-    entry.runtime_data = WolfRuntimeData(http, client, coordinators)
+    writer = WriteManager(hass, entry)
+    await writer.async_load()
+    for coordinator in coordinators.values():
+        # After each poll: confirm written values or correct them (ADR-Writes-012).
+        entry.async_on_unload(
+            coordinator.async_add_listener(partial(writer.async_check_pending, coordinator))
+        )
+    entry.runtime_data = WolfRuntimeData(http, client, coordinators, writer)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # The first refresh ran before any entity was listening; poll the enabled
     # parameters now instead of waiting a full interval with unknown states.

@@ -354,6 +354,31 @@ class WolfClient:
             for v in data.get("Values") or []
         ]
 
+    async def write_value(
+        self, system: System, bundle_id: int, value_id: int, value: str, name: str
+    ) -> Any:
+        """Write one value like the web portal does. Never retried.
+
+        A repeated request after a timeout or 5xx could write the EEPROM twice,
+        so every failure is raised to the caller (ADR-Writes-012).
+        """
+        await self._ensure_session()
+        payload = {
+            "WriteParameterValues": [{"ValueId": value_id, "Value": value, "ParameterName": name}],
+            "SystemId": system.id,
+            "GatewayId": system.gateway_id,
+            "BundleId": bundle_id,
+            "SessionId": self._session_id,
+        }
+        try:
+            return await self._call("POST", "WriteParameterValues", json=payload)
+        except _Unauthorized:
+            self._token = None
+            raise ApiError(401, "WriteParameterValues") from None
+        except _InvalidSession:
+            self._session_id = None
+            raise ApiError(1, "WriteParameterValues") from None
+
     async def close(self) -> None:
         """Release the portal session; errors are irrelevant at this point."""
         if self._session_id is None:

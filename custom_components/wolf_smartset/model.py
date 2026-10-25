@@ -296,6 +296,10 @@ def parse_description(raw: dict[str, Any]) -> Description:
         )
 
     _mark_duplicate_ports(parameters)
+    for parameter in parameters.values():  # unmapped ones too, for diagnostics
+        parameter.label = (
+            f"{parameter.prefix} {parameter.name}" if parameter.prefix else parameter.name
+        )
     _assign_labels([p for p in parameters.values() if p.kind])
     return Description(parameters, devices)
 

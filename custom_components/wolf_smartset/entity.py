@@ -3,7 +3,6 @@
 from collections.abc import Iterable
 
 from homeassistant.const import EntityCategory
-from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -72,10 +71,11 @@ class WolfEntity(CoordinatorEntity[WolfSystemCoordinator]):
         raw = (self.coordinator.data or {}).get(self.parameter.value_id)
         return None if raw is None or raw.strip() in _EMPTY else raw
 
-    def _raise_read_only(self) -> None:
-        # ponytail: Phase 2 is read-only; the write pipeline (ADR-Writes-004/005) comes in Phase 3
-        raise ServiceValidationError(
-            translation_domain=DOMAIN, translation_key="writes_not_available"
+    async def _async_write(self, target: str) -> None:
+        """Every entity write goes through the pipeline (ADR-Writes-012)."""
+        writer = self.coordinator.config_entry.runtime_data.writer
+        await writer.async_write(
+            self.coordinator, self.parameter, target, source="entity", entity=self
         )
 
 

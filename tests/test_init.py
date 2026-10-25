@@ -7,9 +7,7 @@ from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
-import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.wolf_smartset.api import AuthError, SystemState, TooManyRequests, Value
@@ -132,20 +130,6 @@ async def test_auth_error_starts_reauth(
     assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
     flows = hass.config_entries.flow.async_progress()
     assert [f["context"]["source"] for f in flows] == ["reauth"]
-
-
-async def test_writes_are_refused(
-    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
-) -> None:
-    """Phase 2 is read-only."""
-    await _setup(hass, mock_config_entry)
-    with pytest.raises(ServiceValidationError):
-        await hass.services.async_call(
-            "switch",
-            "turn_on",
-            {"entity_id": _entity_id(hass, "switch", 22004200000)},
-            blocking=True,
-        )
 
 
 async def test_unload_closes_session(

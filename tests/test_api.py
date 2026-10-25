@@ -174,3 +174,35 @@ def test_token_parser() -> None:
     """Token found by name, not position."""
     assert extract_verification_token(LOGIN_PAGE) == "tok"
     assert extract_verification_token("<html></html>") is None
+
+
+async def test_write_value_payload(client: WolfClient, portal: FakePortal) -> None:
+    """Same payload as the portal; the value is always a string."""
+
+    def write(request: httpx.Request) -> httpx.Response:
+        assert json.loads(request.content) == {
+            "WriteParameterValues": [
+                {"ValueId": 22004200000, "Value": "1", "ParameterName": "1x Warmwasser"}
+            ],
+            "SystemId": 1,
+            "GatewayId": 2,
+            "BundleId": 1000,
+            "SessionId": 42,
+        }
+        return httpx.Response(200, json={})
+
+    portal.api["WriteParameterValues"] = write
+    await client.write_value(SYSTEM, 1000, 22004200000, "1", "1x Warmwasser")
+    assert portal.calls.count("WriteParameterValues") == 1
+
+
+@pytest.mark.parametrize("status", [401, 500, 503])
+async def test_write_value_is_never_retried(
+    client: WolfClient, portal: FakePortal, status: int
+) -> None:
+    """A failed write is reported, not repeated (EEPROM, ADR-Writes-012)."""
+    portal.api["WriteParameterValues"] = lambda r: httpx.Response(status, json={})
+    with pytest.raises(ApiError):
+        await client.write_value(SYSTEM, 1000, 22004200000, "1", "1x Warmwasser")
+    assert portal.calls.count("WriteParameterValues") == 1
+    assert portal.logins == 1

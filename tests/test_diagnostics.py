@@ -27,3 +27,4 @@ async def test_redaction(
     for secret in ("user@example.com", "secret", "5678", '"Home"'):
         assert secret not in text
     assert result["systems"][0]["kinds"]["switch"] == 1
+    assert result["writes"] == {"dry_run": True, "max_writes_per_hour": 20, "history": []}

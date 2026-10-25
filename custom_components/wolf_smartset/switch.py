@@ -32,9 +32,9 @@ class WolfSwitch(WolfEntity, SwitchEntity):
         return None if raw is None else raw == "1"
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Writing arrives in Phase 3."""
-        self._raise_read_only()
+        """Start the action."""
+        await self._async_write("1")
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        """Writing arrives in Phase 3."""
-        self._raise_read_only()
+        """Cancel the action."""
+        await self._async_write("0")
