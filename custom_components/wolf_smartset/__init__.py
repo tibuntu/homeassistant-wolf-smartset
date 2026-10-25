@@ -4,11 +4,15 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, issue_registry as ir
-from homeassistant.helpers.httpx_client import create_async_httpx_client
 
 from .api import System, WolfClient
 from .const import CONF_SYSTEMS, DOMAIN
-from .coordinator import WolfConfigEntry, WolfRuntimeData, WolfSystemCoordinator
+from .coordinator import (
+    WolfConfigEntry,
+    WolfRuntimeData,
+    WolfSystemCoordinator,
+    create_http_client,
+)
 from .entity import system_device_info
 
 PLATFORMS = [
@@ -22,7 +26,7 @@ PLATFORMS = [
 
 async def async_setup_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> bool:
     """One login for the account, one coordinator per selected system."""
-    http = create_async_httpx_client(hass, auto_cleanup=False)
+    http = create_http_client()
     client = WolfClient(http, entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD])
     coordinators: dict[int, WolfSystemCoordinator] = {}
     try:

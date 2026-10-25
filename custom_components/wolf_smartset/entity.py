@@ -4,6 +4,7 @@ from collections.abc import Iterable
 
 from homeassistant.const import EntityCategory
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -56,7 +57,11 @@ class WolfEntity(CoordinatorEntity[WolfSystemCoordinator]):
                 identifiers={(DOMAIN, f"{system_id}_{parameter.device}")},
                 name=coordinator.description.devices[parameter.device],
                 manufacturer=MANUFACTURER,
-                via_device=(DOMAIN, str(system_id)),
+                via_device_id=dr.async_get_device_id_by_identifier(
+                    coordinator.hass,
+                    (DOMAIN, str(system_id)),
+                    config_entry_id=coordinator.config_entry.entry_id,
+                ),
             )
         else:
             self._attr_device_info = system_device_info(coordinator)

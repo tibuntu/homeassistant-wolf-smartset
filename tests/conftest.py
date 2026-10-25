@@ -27,6 +27,19 @@ def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
     """Load custom_components/ in every test."""
 
 
+@pytest.fixture(autouse=True)
+def no_frame_warnings(caplog: pytest.LogCaptureFixture) -> Generator[None]:
+    """HA's deprecation and misuse reports must fail the test, not just log."""
+    yield
+    reports = [
+        record.getMessage()
+        for when in ("setup", "call")
+        for record in caplog.get_records(when)
+        if "Detected that custom integration" in record.getMessage()
+    ]
+    assert not reports
+
+
 @pytest.fixture
 def description() -> dict[str, Any]:
     """Fresh copy of the heat-pump description."""

@@ -8,8 +8,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.httpx_client import SERVER_SOFTWARE, USER_AGENT
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
+from homeassistant.util.ssl import client_context
 import httpx
 
 from .api import (
@@ -35,6 +37,18 @@ from .const import (
     MAX_BACKOFF,
 )
 from .model import Description, parse_description
+
+
+def create_http_client() -> httpx.AsyncClient:
+    """Own HTTP client with HA's SSL context and user agent.
+
+    HA's shared or created httpx clients must not be closed by integrations, and
+    their cookie jars are not ours alone. The login cookies belong to one account,
+    so each config entry and each config flow gets its own client and closes it.
+    """
+    return httpx.AsyncClient(
+        verify=client_context(), headers={USER_AGENT: SERVER_SOFTWARE}, timeout=30
+    )
 
 
 @dataclass

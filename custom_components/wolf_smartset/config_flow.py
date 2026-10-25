@@ -12,7 +12,6 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.httpx_client import create_async_httpx_client
 from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
@@ -43,6 +42,7 @@ from .const import (
     LOGGER,
     MIN_SCAN_INTERVAL,
 )
+from .coordinator import create_http_client
 
 PASSWORD_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
 USER_SCHEMA = probatio.Schema(
@@ -56,9 +56,9 @@ USER_SCHEMA = probatio.Schema(
 REAUTH_SCHEMA = probatio.Schema({probatio.Required(CONF_PASSWORD): PASSWORD_SELECTOR})
 
 
-async def _fetch_systems(hass: HomeAssistant, username: str, password: str) -> list[System]:
+async def _fetch_systems(username: str, password: str) -> list[System]:
     """Log in once, list the systems, release the session."""
-    http = create_async_httpx_client(hass, auto_cleanup=False)
+    http = create_http_client()
     client = WolfClient(http, username, password)
     try:
         return await client.get_systems()
@@ -74,7 +74,7 @@ async def _validate(
         errors[CONF_PASSWORD] = "password_too_long"
         return None
     try:
-        return await _fetch_systems(hass, username, password)
+        return await _fetch_systems(username, password)
     except AuthError:
         errors["base"] = "invalid_auth"
     except TooManyRequests, PortalUnavailable:
