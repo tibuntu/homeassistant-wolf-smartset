@@ -498,3 +498,32 @@ Die wichtigsten Befunde:
 7. **Auth-Historie** (jeweils Ausfall der Integrationen): 2023-01 erster OpenID-Umstieg (zurückgerollt), 2024-02 endgültig OpenID → wolf-comm, 2024-03 Passwort-Flow abgeschaltet + IP-Sperren → Token-Reuse/UpdateSession (wolf-comm 0.0.7, HA 2024.5), 2025-04/07 Login-Seiten ohne Formular (Wolf-Ausfälle), 2025-10 `KeyError: 'code'` bei Mehrfach-Login, 2026-03 GUI-Strukturänderung (Solar-Sensoren weg), 2026-06 `SystemShareId` für geteilte Systeme. `id.wolf.eu` taucht nirgends auf; es bleibt `www.wolf-smartset.com/idsrv` (IdentityServer, JWT verweist auf „lucon IoT Hub“). [Doku]
 8. **Lokal vs. Cloud.** ISM7 erlaubt nur eine lokale Verbindung (Wolf bestätigt, ism7mqtt-README); ISM8 parallel zum Link Pro möglich; CHA/FHA-Wärmepumpen laut Wolf „EEBus-ready“ (seit 2025-11) – ein möglicher späterer lokaler Pfad, hier nicht weiterverfolgt. [Doku/Bericht]
 9. **ValueIds können sich ändern** (HA #44453, 2021: nach IP-Wechsel/Reconnect `ReadParameterValues error`, neue ValueIds) – stützt das ParameterId-zentrierte Modell. [Bericht]
+
+## 12. Nachtrag 2026-10-25: Gerät der Warmwasser-Parameter
+
+**Frage:** Lassen sich die Warmwasser-Parameter (ValueId-Präfix 35 sowie `22004200000` „1x Warmwasser“) über das Anlagenschema einem Gerät zuordnen? Ein Abgleich über den Vorlagennamen `WWSystem_BM_2` reicht als Beleg nicht. Geprüft wird, ob die `parameters`-Liste des Schema-Eintrags diese ValueIds enthält.
+
+**Rohdaten** (aufgezeichnete Beschreibung der Anlage, `SVGHeatingSchemaConfigDevices` im Tab „Übersicht“; ValueIds unverändert, keine System- oder Gateway-IDs enthalten):
+
+```json
+[
+  {"dt": "HG", "di": 1, "deviceTemplateName": "CHA", "configIndex": 4, "hdt": null, "hdi": null,
+   "parameters": [27000600001, 27000900001, 27002900001, 27000700001, 27002800001, 27003000001,
+                  27001200001, 27001300001, 27001400001, 27004800001, 27001600001]},
+  {"dt": "BM", "di": 0, "deviceTemplateName": "BM_2", "configIndex": 0},
+  {"dt": "MM", "di": 1, "deviceTemplateName": "MM", "configIndex": 8, "hdt": "MM", "hdi": 1,
+   "parameters": [4000100001, 4000200001, 4002700001]},
+  {"dt": "MK", "di": 1, "deviceTemplateName": "MK_BM_2", "configIndex": 0, "hdt": "MM", "hdi": 1},
+  {"dt": "WWSystem", "di": 0, "deviceTemplateName": "WWSystem_BM_2", "configIndex": 0, "hdt": "CHA", "hdi": 1}
+]
+```
+
+(`parameters` gekürzt auf die `valueId`s; jedes Element hat zusätzlich `parameterName`, `parameterId` und optional `unit`.)
+
+**Ergebnis: nein.**
+
+- Der Eintrag `WWSystem_BM_2` hat keine `parameters`-Liste. `35000900000`, `35001200000`, `35000100000` und `22004200000` kommen in keinem Schema-Eintrag als `valueId` vor.
+- Nur die Einträge `CHA` (11 ValueIds, alle Präfix 27) und `MM` (3 ValueIds, alle Präfix 4) haben Parameter. Diese Parameter sind über die Fachmann-Untermenüs bzw. die Präfix-Regel (ADR-Model-009) bereits demselben Gerät zugeordnet. Eine Zuordnung über die Schema-Listen bringt also keine neue Information.
+- Die Felder `hdt`/`hdi` (vermutlich „host device type/index“) nennen für `WWSystem` den Wärmeerzeuger `CHA 1` als Host, nicht das BM-2. Der Vorlagenname hätte damit auf das falsche Gerät gezeigt. Für eine Zuordnung taugen auch `hdt`/`hdi` nicht, weil die Verbindung zwischen Präfix 35 und dem Schema-Gerät `WWSystem` in den Daten fehlt.
+
+**Entscheidung** (nach der vorgegebenen Regel): Die Warmwasser-Parameter bleiben am System-Gerät. Es gibt kein logisches Gerät „Warmwasser“ und keine Zuordnung über Schema-Listen, weil die Prüfung negativ ist. Der Code bleibt unverändert. `test_device_by_value_id_prefix` sichert ab, dass Präfix 35 am System-Gerät bleibt.
