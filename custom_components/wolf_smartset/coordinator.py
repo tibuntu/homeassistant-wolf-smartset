@@ -1,14 +1,17 @@
 """One DataUpdateCoordinator per SmartSet system (ADR-Polling-003)."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
+import hashlib
 from typing import TYPE_CHECKING, override
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.httpx_client import SERVER_SOFTWARE, USER_AGENT
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 from homeassistant.util.ssl import client_context
@@ -27,6 +30,8 @@ from .api import (
     Value,
     WolfClient,
     WolfError,
+    get_login_backoff,
+    restore_login_backoff,
 )
 from .const import (
     BACKOFF_ISSUE_STEPS,
@@ -53,6 +58,36 @@ def create_http_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(
         verify=client_context(), headers={USER_AGENT: SERVER_SOFTWARE}, timeout=30
     )
+
+
+LOGIN_BACKOFF_STORE = f"{DOMAIN}.login_backoff"
+
+
+async def async_login_backoff_hook(hass: HomeAssistant, username: str) -> Callable[[], None]:
+    """Restore this account's login block and return the callback that persists it.
+
+    The block survives restarts, so a restart during a portal block does not log in
+    again (ADR-Client-015). Accounts are stored as SHA-256 of the lower-cased username.
+    """
+    if LOGIN_BACKOFF_STORE not in hass.data:
+        store: Store[dict[str, list[float]]] = Store(hass, 1, LOGIN_BACKOFF_STORE)
+        hass.data[LOGIN_BACKOFF_STORE] = (store, await store.async_load() or {})
+    store, data = hass.data[LOGIN_BACKOFF_STORE]
+    key = hashlib.sha256(username.lower().encode()).hexdigest()
+    if key in data:
+        until, failures = data[key]
+        restore_login_backoff(username, until, int(failures))
+
+    @callback
+    def persist() -> None:
+        state = get_login_backoff(username)
+        if state is None:
+            data.pop(key, None)
+        else:
+            data[key] = list(state)
+        store.async_delay_save(lambda: data, 0)
+
+    return persist
 
 
 @dataclass

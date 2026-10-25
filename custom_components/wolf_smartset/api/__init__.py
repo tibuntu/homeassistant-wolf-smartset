@@ -10,6 +10,7 @@ See docs/adr/ADR-Client-001-own-thin-api-client.md.
 
 import asyncio
 import base64
+from collections.abc import Callable
 import contextlib
 from dataclasses import dataclass
 from datetime import datetime
@@ -34,7 +35,7 @@ MAX_PASSWORD_LENGTH = 30
 SESSION_REFRESH_SECONDS = 60
 TOKEN_EXPIRY_MARGIN_SECONDS = 60
 
-# A failed login blocks the next attempt for this long, doubling per failure (ADR-Client-014).
+# A failed login blocks the next attempt for this long, doubling per failure (ADR-Client-015).
 LOGIN_BACKOFF_SECONDS = 300
 LOGIN_BACKOFF_MAX_SECONDS = 3600
 
@@ -180,14 +181,40 @@ def _raise_for_body(data: Any) -> None:
     raise ApiError(code, message)
 
 
+def get_login_backoff(username: str) -> tuple[float, int] | None:
+    """Block end as wall-clock epoch seconds and consecutive failures, for persisting."""
+    entry = _login_backoff.get(username.lower())
+    if entry is None:
+        return None
+    return time.time() + entry[0] - time.monotonic(), entry[1]
+
+
+def restore_login_backoff(username: str, until: float, failures: int) -> None:
+    """Re-arm a persisted block after a restart; a later block already in memory wins."""
+    key = username.lower()
+    blocked_until = time.monotonic() + until - time.time()
+    if key not in _login_backoff or blocked_until > _login_backoff[key][0]:
+        _login_backoff[key] = (blocked_until, failures)
+
+
 class WolfClient:
     """One login and one portal session per account, shared by all systems."""
 
-    def __init__(self, http: httpx.AsyncClient, username: str, password: str) -> None:
-        """Use the given HTTP client; its cookie jar holds the login cookies."""
+    def __init__(
+        self,
+        http: httpx.AsyncClient,
+        username: str,
+        password: str,
+        on_login_backoff: Callable[[], None] | None = None,
+    ) -> None:
+        """Use the given HTTP client; its cookie jar holds the login cookies.
+
+        `on_login_backoff` is called whenever this account's login block changes.
+        """
         self._http = http
         self._username = username
         self._password = password
+        self._on_login_backoff = on_login_backoff
         self._lock = asyncio.Lock()
         self._token: str | None = None
         self._token_expires = 0.0
@@ -304,7 +331,8 @@ class WolfClient:
         except WolfError:
             self._record_login_failure(now)
             raise
-        _login_backoff.pop(key, None)
+        if _login_backoff.pop(key, None) is not None:
+            self._backoff_changed()
 
     def _record_login_failure(self, now: float) -> None:
         """Block the next login attempt for this account, doubling per consecutive failure."""
@@ -312,6 +340,11 @@ class WolfClient:
         _, failures = _login_backoff.get(key, (0.0, 0))
         delay = min(LOGIN_BACKOFF_SECONDS * 2**failures, LOGIN_BACKOFF_MAX_SECONDS)
         _login_backoff[key] = (now + delay, failures + 1)
+        self._backoff_changed()
+
+    def _backoff_changed(self) -> None:
+        if self._on_login_backoff is not None:
+            self._on_login_backoff()
 
     @property
     def login_blocked_seconds(self) -> int:

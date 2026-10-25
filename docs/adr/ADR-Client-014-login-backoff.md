@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-Client-015](ADR-Client-015-login-backoff-survives-restarts.md)
 
 ## Date
 
@@ -61,3 +61,4 @@ Five minutes as the first step follows the ioBroker fork's experience (1 → 4 �
 
 - [ADR-Client-001: Own thin API client](ADR-Client-001-own-thin-api-client.md)
 - [ADR-Polling-003: Polling strategy](ADR-Polling-003-polling-strategy.md)
+- [ADR-Client-015: Login backoff that survives restarts](ADR-Client-015-login-backoff-survives-restarts.md) — supersedes this ADR

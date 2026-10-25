@@ -13,6 +13,7 @@ from .coordinator import (
     WolfConfigEntry,
     WolfRuntimeData,
     WolfSystemCoordinator,
+    async_login_backoff_hook,
     create_http_client,
 )
 from .entity import system_device_info
@@ -31,7 +32,13 @@ PLATFORMS = [
 async def async_setup_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> bool:
     """One login for the account, one coordinator per selected system."""
     http = create_http_client()
-    client = WolfClient(http, entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD])
+    username = entry.data[CONF_USERNAME]
+    client = WolfClient(
+        http,
+        username,
+        entry.data[CONF_PASSWORD],
+        on_login_backoff=await async_login_backoff_hook(hass, username),
+    )
     coordinators: dict[int, WolfSystemCoordinator] = {}
     try:
         for stored in entry.data[CONF_SYSTEMS]:

@@ -48,7 +48,7 @@ from .const import (
     LOGGER,
     MIN_SCAN_INTERVAL,
 )
-from .coordinator import create_http_client
+from .coordinator import async_login_backoff_hook, create_http_client
 
 PASSWORD_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
 USER_SCHEMA = probatio.Schema(
@@ -62,10 +62,12 @@ USER_SCHEMA = probatio.Schema(
 REAUTH_SCHEMA = probatio.Schema({probatio.Required(CONF_PASSWORD): PASSWORD_SELECTOR})
 
 
-async def _fetch_systems(username: str, password: str) -> list[System]:
+async def _fetch_systems(hass: HomeAssistant, username: str, password: str) -> list[System]:
     """Log in once, list the systems, release the session."""
     http = create_http_client()
-    client = WolfClient(http, username, password)
+    client = WolfClient(
+        http, username, password, on_login_backoff=await async_login_backoff_hook(hass, username)
+    )
     try:
         return await client.get_systems()
     finally:
@@ -80,7 +82,7 @@ async def _validate(
         errors[CONF_PASSWORD] = "password_too_long"
         return None
     try:
-        return await _fetch_systems(username, password)
+        return await _fetch_systems(hass, username, password)
     except AuthError:
         errors["base"] = "invalid_auth"
     except TooManyRequests, PortalUnavailable, LoginFailed:
