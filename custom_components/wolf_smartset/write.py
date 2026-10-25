@@ -166,12 +166,12 @@ class WriteManager:
         return int(self._entry.options.get(CONF_MAX_WRITES_PER_HOUR, DEFAULT_MAX_WRITES_PER_HOUR))
 
     def _writes_last_hour(self) -> int:
-        """Real writes (applied or not) recorded during the last hour."""
+        """Real write attempts (applied, not applied or failed) recorded during the last hour."""
         cutoff = dt_util.utcnow() - timedelta(hours=1)
         return sum(
             1
             for record in self.history
-            if record.get("result") in (RESULT_OK, RESULT_NOT_APPLIED)
+            if record.get("result") in (RESULT_OK, RESULT_NOT_APPLIED, RESULT_ERROR)
             and (written := dt_util.parse_datetime(record.get("time") or "")) is not None
             and written >= cutoff
         )

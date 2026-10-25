@@ -577,3 +577,18 @@ async def test_undo_of_an_unparsable_value_is_a_validation_error(
     with pytest.raises(ServiceValidationError) as err:
         await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
     assert err.value.translation_key == "invalid_number"
+
+
+async def test_failed_writes_count_towards_the_budget(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """A write the portal rejected still consumed a request; the next one is rate-limited."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False, CONF_MAX_WRITES_PER_HOUR: 1})
+    mock_client.write_value = AsyncMock(side_effect=ApiError(4, "offline"))
+    with pytest.raises(HomeAssistantError) as err:
+        await _set_setpoint(hass, 55)
+    assert err.value.translation_key == "write_failed"
+    with pytest.raises(HomeAssistantError) as err:
+        await _set_setpoint(hass, 56)
+    assert err.value.translation_key == "rate_limited"
+    assert mock_client.write_value.await_count == 1

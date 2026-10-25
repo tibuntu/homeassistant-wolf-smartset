@@ -52,7 +52,7 @@
         "data_description": {
           "scan_interval": "Sekunden zwischen zwei Abfragen. Wolf erlaubt höchstens eine Abfrage pro Minute.",
           "dry_run": "Solange aktiv, werden Änderungen nur protokolliert (INFO) mit Parameter, altem und neuem Wert; an die Heizung wird nichts gesendet.",
-          "max_writes_per_hour": "Schützt das EEPROM der Regelung vor Automationsschleifen. Übersprungene Schreibvorgänge mit unverändertem Wert zählen nicht."
+          "max_writes_per_hour": "Schützt das EEPROM der Regelung vor Automationsschleifen. Übersprungene Schreibvorgänge mit unverändertem Wert zählen nicht. Fehlgeschlagene Schreibvorgänge zählen mit."
         }
       }
     }

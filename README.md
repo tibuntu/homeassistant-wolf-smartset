@@ -25,7 +25,7 @@ Settings › Devices & services › Wolf SmartSet › *Configure*:
 |---|---|---|
 | Poll interval | 120 s | Seconds between polls, 60 to 3600. Wolf allows at most one poll per minute. |
 | Dry run | on | While on, changes are only logged at INFO with parameter, old and new value; nothing is sent to the heating system. |
-| Maximum writes per hour | 20 | Rolling limit for real writes, 1 to 60. Skipped writes (value already set) and dry runs do not count. |
+| Maximum writes per hour | 20 | Rolling limit for real write attempts, 1 to 60. Failed writes count; skipped writes (value already set) and dry runs do not. |
 
 ## Entities disabled by default
 
