@@ -453,7 +453,14 @@ Koexistenz mit core `wolflink`: funktional möglich (zweite Session), aber doppe
 
 ## 9. Offene Fragen an dich (vor Phase 1)
 
-1. **Welche Anlage** genau (Wärmeerzeuger, Regelung BM-2/BM-2 Solar, Mischer-/Solarmodule, Kaskade, Lüftung)? Gateway-Typ (Link Home/ISM7, Link Pro/ISM7e, Link Home Pro)? Das bestimmt die Fixtures und welche Beispielbeschreibung am nächsten liegt.
+1. ~~Welche Anlage?~~ **Beantwortet (Typenschild-Fotos, 2026-10-25):**
+   - Wärmepumpe Wolf **CHA-07/400V oder CHA-10/400V** (das Inspektionsschild nennt beide Typen), Innenteil-Steuerung „Gesamtmontage Steuerung CHA IDU“.
+   - Gateway **WOLF Link home**, Firmware 4.40.
+   - Warmwasser-Wärmepumpenspeicher **SEW-2-200** (190 l), Pufferspeicher **SPU-2-500** (490 l).
+   - Zirkulationspumpe Grundfos Comfort PM mit eigener Zeitsteuerung, nicht über die Wolf-Regelung angebunden. Sie taucht daher voraussichtlich nicht in der API auf.
+   - Offen bleibt, ob ein Bedienmodul BM-2 und ein Mischermodul MM1 verbaut sind. Das zeigt die Parameterbeschreibung beim ersten lesenden Abruf.
+
+   Folgen: Das wolf-comm-Beispiel `heatpumpparameter.json` (Gerätevorlage `CHA`, BM-2, MM1) ist die nächstliegende Fixture-Basis. heatwrite wurde an genau dieser Gerätefamilie entwickelt (CHA-10 mit BM-2, 241 Parameter, 117 beschreibbar). Die Use-Case-Tabelle in 4.10 gilt damit sehr wahrscheinlich unverändert, die konkreten ValueIds werden trotzdem aus der echten Beschreibung gelesen.
 2. **Konto**: Ist das System in deinem eigenen Konto (AccessLevel vermutlich 4) oder geteilt? Hast du das Fachmann-Passwort und willst du ExpertLogin überhaupt erlauben (IP-klebrig, Statistik-Nebenwirkung)?
 3. **Core `wolflink`** soll während der Entwicklung parallel laufen (Vergleichswerte, zweite Session) oder deaktiviert werden?
 4. Die **Use Cases** im Auftrag standen noch als Platzhalter („z. B. …“): 1x Warmwasser, Sparfaktor/Heizkurve, Betriebsart – bestätigen oder ergänzen (z. B. Warmwasser-Soll, SG/PV-Parameter, Zeitprogramme später)?
