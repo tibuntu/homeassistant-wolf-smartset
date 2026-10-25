@@ -85,3 +85,17 @@ Formally below Bronze, materially close to Silver. Cheapest steps to Bronze: tes
 - `api/__init__.py`: no write retry (tested), state check in the OIDC flow, standard library only, no `ExpertLogin`, no requirements.
 - Fixtures and git history free of IDs, e-mails, IPs, MACs and time programs; `GatewayUsername` recognised as the serial number and redacted; diagnostics redact nested data.
 - Model: writability from `IsReadOnly`, `ControlType` and `AccessLevel`; limits from `MinValueCondition`; devices only from data evidence (ADR-Model-010).
+
+## Status after the remediation branch
+
+| Finding | Status |
+|---|---|
+| 1, 7 | fixed in c31b7b0 (ADR-Writes-013) |
+| 2 | recording in place (T1); fixture and validation pending the owner's approved write |
+| 3, 17 | fixed (ADR-Client-014) |
+| 4, 11, 19 | fixed (README, de.json, brand assets) |
+| 5, 6, 8, 9, 16, 18, 20, 21, 22, 24 | fixed (T4, one commit each) |
+| 10 | void: `NumberSelector.__call__` already refuses values outside min and max (`InvalidData`); the review's trace missed it. Regression tests in T3 pin it. |
+| 12, 13, 14, 15 | fixed (T3, coverage gate 95 %) |
+| 23 | void: git shows every ADR was created on its stated date |
+| 25 | accepted: one state request per interval while all entities are disabled |
