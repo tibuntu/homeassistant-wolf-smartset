@@ -38,7 +38,7 @@ Writes on the owner's own system for manual, user-level changes are acceptable: 
 7. `write.py:111` with `__init__.py:53-54`: `_pending` is not persisted; a write shortly before an HA restart is never confirmed or corrected. CONFIRMED. **Fixed in c31b7b0** (such records become `confirmed: false`, `read_back: null`).
 8. `number.py:37` and `write.py:94`: `step or 1.0` is a hard-coded fallback. All 71 number parameters of the real description carry `StepWidth`; the direction is fail-safe. CONFIRMED (no occurrence), risk PLAUSIBLE.
 9. `model.py:206`: `BundleId or 1000`; a tab without `BundleId` would be polled with 1000, which ADR-Polling-003 forbids (ioBroker #459). PLAUSIBLE.
-10. `config_flow.py:196-198`: options are not validated server-side (interval below 60 s, writes per hour outside 1 to 60). CONFIRMED.
+10. `config_flow.py:196-198`: options are not validated server-side (interval below 60 s, writes per hour outside 1 to 60). CONFIRMED. **Correction: void.** `NumberSelector.__call__` (Home Assistant `helpers/selector.py`) refuses values outside `min` and `max` before the flow sees them; the trace stopped at the integration's code. Only the `step` is unenforced, which is harmless here.
 11. `translations/de.json`: `config` and `issues` sections missing. CONFIRMED.
 12. `config_flow.py:87-91,116,140`: uncovered branches (`unknown`, `no_systems`, `no_system_selected`); Bronze rule `config-flow-test-coverage` unmet. CONFIRMED.
 13. `coordinator.py:164-176,180-195`: isolation after `ParameterReadError` (up to 57 single requests in a burst, no pause) and the daily description reload are untested; "reload after a read error that hints at changed IDs" from ADR-Polling-003 is not implemented. CONFIRMED.

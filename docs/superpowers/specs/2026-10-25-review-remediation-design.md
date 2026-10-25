@@ -82,7 +82,7 @@ Source: `docs/reviews/2026-10-25-write-pipeline.md`. Findings 1 and 7 are alread
 
 **pyproject.** `version` aligned with `manifest.json` (`0.2.0.dev2`, release-please overwrites both at release); `--cov-fail-under=95`. Acceptance: `uv run pytest` passes at 95 % or more; if the coordinator and API error paths still leave a gap, add the missing API tests (429 on each login step, token response without `access_token`, `UpdateSession` after 60 s, second 401 and second `InvalidSession`, `close` with and without session) in the same task.
 
-## T4: batch of small fixes (findings 5, 6, 8, 9, 10, 16, 18, 20 to 24)
+## T4: batch of small fixes (findings 5, 6, 8, 9, 16, 18, 20 to 24; 10 and 23 are void, see below)
 
 One task, one commit per finding, each with its test.
 
@@ -90,7 +90,7 @@ One task, one commit per finding, each with its test.
 - **6** `write.py`: delete `_writes`; the rate limit counts history records with `result` in `(RESULT_OK, RESULT_NOT_APPLIED)` whose `time` lies within the last hour (`dt_util.parse_datetime`, compare with `dt_util.utcnow()`). Test: after a restart (new `WriteManager`, `async_load`) earlier writes still count; `test_rate_limit` unchanged.
 - **8** `model.py` `Parameter.kind`: `NUMBER` additionally requires `self.step` not `None` and greater than 0; `number.py` uses `parameter.step` without fallback and raises `ValueError` in `__init__` when it is missing; `write.py` `validate` uses `parameter.step` directly. Test: the DHW setpoint descriptor without `StepWidth` becomes `Kind.SENSOR`.
 - **9** `model.py` `parse_description`: a tab without `BundleId` is skipped with one `logging.getLogger(__name__).warning` naming the tab; no `1000` fallback. Test: a tab stripped of `BundleId` contributes no parameter.
-- **10** `config_flow.py` options schema: `probatio.All(NumberSelector(...), probatio.Coerce(int), probatio.Range(min=MIN_SCAN_INTERVAL, max=3600))` and `probatio.Range(min=1, max=60)` for the write limit. Test: `10` seconds and `0` writes raise `InvalidData`.
+- **10** void: `NumberSelector.__call__` in Home Assistant already refuses values outside its `min` and `max` with `probatio.Invalid`, which the flow turns into `InvalidData`; the review's trace missed it. Only regression tests remain (options outside the limits raise `InvalidData`, floats are stored as integers), placed in T3.
 - **16** `__init__.py` `_check_wolflink(hass, username)`: the issue is raised only when a loaded `wolflink` entry has the same `username` (case-insensitive). Test: a loaded `wolflink` entry with another username raises no issue; same username raises it.
 - **18** `model.py` `Parameter.kind`: `KNOWN_SWITCHES` yields `Kind.SWITCH` only when `self.writable`; otherwise the list rules apply (`Kind.ENUM`). Test: `IsReadOnly: true` on `22004200000` gives an enum sensor.
 - **20** `scripts/record_fixtures.py`: a pure function `secret_value_ids(description) -> set[int]` (ControlType in `SECRET_CONTROL_TYPES` or name matching `SECRET_PARAMETER`) and `redact_values(values, secret_ids)` blanking `Value` to `**REDACTED**`; `record` applies it to `values_<n>.json`. Test in `tests/test_record_fixtures.py` for both functions against the heat-pump fixture.
