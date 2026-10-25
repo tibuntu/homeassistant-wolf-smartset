@@ -1,6 +1,9 @@
 """Parameter model against the heat-pump description (ADR-Model-011, ADR-Model-010)."""
 
+import logging
 from typing import Any
+
+import pytest
 
 from custom_components.wolf_smartset.model import Kind, parse_description, slugify
 
@@ -119,3 +122,48 @@ def test_enabled_by_default(description: dict[str, Any]) -> None:
         "Mischermotor",
     ):
         assert kept not in disabled
+
+
+def _descriptors(description: dict[str, Any], value_id: int) -> list[dict[str, Any]]:
+    """Every descriptor of a ValueId anywhere in the description."""
+    found: list[dict[str, Any]] = []
+
+    def walk(node: Any) -> None:
+        if isinstance(node, dict):
+            if node.get("ValueId") == value_id:
+                found.append(node)
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(description)
+    return found
+
+
+def test_number_needs_a_step(description: dict[str, Any]) -> None:
+    """Without StepWidth a numeric input cannot be validated, so it stays a sensor."""
+    for descriptor in _descriptors(description, 35000900000):
+        descriptor.pop("StepWidth", None)
+    assert parse_description(description).parameters[35000900000].kind is Kind.SENSOR
+
+
+def test_tab_without_bundle_id_is_skipped(
+    description: dict[str, Any], caplog: pytest.LogCaptureFixture
+) -> None:
+    """Polling an invented bundle id can lock the account; such tabs contribute nothing."""
+    for tab in description["MenuItems"][0]["TabViews"]:
+        if tab["TabName"] == "Warmwasser":
+            del tab["BundleId"]
+    with caplog.at_level(logging.WARNING):
+        parameters = parse_description(description).parameters
+    assert 35000900000 not in parameters
+    assert "Warmwasser" in caplog.text
+
+
+def test_known_switch_needs_write_access(description: dict[str, Any]) -> None:
+    """A read-only '1x Warmwasser' is an enum sensor, not a switch that always fails."""
+    for descriptor in _descriptors(description, 22004200000):
+        descriptor["IsReadOnly"] = True
+    assert parse_description(description).parameters[22004200000].kind is Kind.ENUM

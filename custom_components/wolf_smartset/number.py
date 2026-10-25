@@ -30,11 +30,11 @@ class WolfNumber(WolfEntity, NumberEntity):
     def __init__(self, coordinator: WolfSystemCoordinator, parameter: Parameter) -> None:
         """Limits are guaranteed by Parameter.kind."""
         super().__init__(coordinator, parameter)
-        if parameter.minimum is None or parameter.maximum is None:
+        if parameter.minimum is None or parameter.maximum is None or parameter.step is None:
             raise ValueError(f"Parameter {parameter.parameter_id} has no limits")
         self._attr_native_min_value = parameter.minimum
         self._attr_native_max_value = parameter.maximum
-        self._attr_native_step = parameter.step or 1.0
+        self._attr_native_step = parameter.step
         if parameter.unit == "°C":
             self._attr_device_class = NumberDeviceClass.TEMPERATURE
             self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS

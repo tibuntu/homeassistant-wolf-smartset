@@ -15,6 +15,8 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 
 from custom_components.wolf_smartset.api import ApiError, SystemState, Value
 from custom_components.wolf_smartset.const import CONF_DRY_RUN, CONF_MAX_WRITES_PER_HOUR, DOMAIN
+from custom_components.wolf_smartset.model import parse_description
+from custom_components.wolf_smartset.write import CONFIRM_AFTER_SECONDS, format_number, same_value
 
 DHW_SETPOINT = 35000900000  # "Warmwassersolltemperatur eingestellt", 25-65 °C, step 1, value 50
 DHW_ONCE = 22004200000  # "1x Warmwasser", switch
@@ -145,13 +147,15 @@ async def test_validation_before_sending(
     mock_client.write_value.assert_not_called()
 
 
+@pytest.mark.parametrize("level", [1, None])
 async def test_access_level_is_respected(
     hass: HomeAssistant,
     mock_client: MagicMock,
     mock_config_entry: MockConfigEntry,
+    level: int | None,
 ) -> None:
-    """An account with read-only access cannot write."""
-    mock_client.get_system_state.return_value = SystemState(True, 1)
+    """A read-only account, or one whose level is unknown, cannot write."""
+    mock_client.get_system_state.return_value = SystemState(True, level)
     await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
     with pytest.raises(ServiceValidationError) as err:
         await _set_setpoint(hass, 55)
@@ -295,3 +299,297 @@ async def test_undo_restores_previous_value(
     assert [c.args[3] for c in mock_client.write_value.call_args_list] == ["55", "50"]
     assert _history(mock_config_entry)[-2]["undone"] is True
     assert _history(mock_config_entry)[-1]["source"] == "undo"
+
+
+@pytest.mark.parametrize(
+    ("response", "expected"),
+    [
+        (
+            {
+                "Values": [{"ValueId": DHW_SETPOINT, "Value": "55", "State": 1}],
+                "SystemId": 1234,
+                "GatewayId": 5678,
+            },
+            {
+                "Values": [{"ValueId": DHW_SETPOINT, "Value": "55", "State": 1}],
+                "SystemId": "**REDACTED**",
+                "GatewayId": "**REDACTED**",
+            },
+        ),
+        (
+            [{"ValueId": DHW_SETPOINT, "State": 1, "SessionId": 42}],
+            [{"ValueId": DHW_SETPOINT, "State": 1, "SessionId": "**REDACTED**"}],
+        ),
+        (
+            {"GatewayUsername": "WL123456", "Values": [{"ValueId": DHW_SETPOINT, "Name": "x"}]},
+            {
+                "GatewayUsername": "**REDACTED**",
+                "Values": [{"ValueId": DHW_SETPOINT, "Name": "**REDACTED**"}],
+            },
+        ),
+    ],
+)
+async def test_write_response_is_kept_redacted(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    hass_storage: dict[str, Any],
+    response: Any,
+    expected: Any,
+) -> None:
+    """The portal's answer lands in the record and in .storage without identifiers."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    mock_client.write_value.return_value = response
+    await _set_setpoint(hass, 55)
+
+    assert _history(mock_config_entry)[-1]["response"] == expected
+    await hass.async_block_till_done()
+    stored = hass_storage[f"{DOMAIN}.{mock_config_entry.entry_id}.history"]["data"]["history"]
+    assert stored[-1]["response"] == expected
+
+
+async def test_only_applied_writes_carry_a_response(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """Dry runs and no-ops never talked to the portal, so they have no response."""
+    await _setup(hass, mock_config_entry)  # dry run
+    await _set_setpoint(hass, 55)
+    assert "response" not in _history(mock_config_entry)[-1]
+    await _set_setpoint(hass, 50)  # no-op
+    assert "response" not in _history(mock_config_entry)[-1]
+
+
+async def test_confirmation_waits_for_the_threshold(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """A poll one second before the threshold keeps the record pending; after it, decides."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    await _set_setpoint(hass, 55)
+    mock_client.get_values.side_effect = lambda system, bundle, ids, first=False: [
+        Value(i, "55" if i == DHW_SETPOINT else "0", 1) for i in ids
+    ]
+    coordinator = mock_config_entry.runtime_data.coordinators[1234]
+
+    freezer.tick(timedelta(seconds=CONFIRM_AFTER_SECONDS - 1))
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert _history(mock_config_entry)[-1]["confirmed"] is None
+
+    freezer.tick(timedelta(seconds=2))
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert _history(mock_config_entry)[-1]["confirmed"] is True
+
+
+async def test_dry_runs_and_no_ops_do_not_count(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """Only real writes consume the hourly budget."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: True, CONF_MAX_WRITES_PER_HOUR: 1})
+    await _set_setpoint(hass, 51)
+    await _set_setpoint(hass, 52)  # two dry runs
+    hass.config_entries.async_update_entry(
+        mock_config_entry, options={CONF_DRY_RUN: False, CONF_MAX_WRITES_PER_HOUR: 1}
+    )
+    await _set_setpoint(hass, 50)
+    await _set_setpoint(hass, 50)  # two no-ops
+    await _set_setpoint(hass, 55)  # the one allowed real write
+    assert mock_client.write_value.await_count == 1
+    assert _history(mock_config_entry)[-1]["result"] == "ok"
+
+
+async def test_rate_limit_window_rolls(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """A write older than one hour no longer counts."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False, CONF_MAX_WRITES_PER_HOUR: 1})
+    await _set_setpoint(hass, 51)
+    with pytest.raises(HomeAssistantError):
+        await _set_setpoint(hass, 52)
+    freezer.tick(timedelta(hours=1, seconds=1))
+    await _set_setpoint(hass, 52)
+    assert mock_client.write_value.await_count == 2
+
+
+async def test_history_keeps_200_records(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """Older records fall off the end."""
+    await _setup(hass, mock_config_entry)  # dry run: every attempt is recorded
+    for i in range(205):
+        await _set_setpoint(hass, 51 + (i % 2))
+    assert len(_history(mock_config_entry)) == 200
+    assert _history(mock_config_entry)[-1]["new"] == "51"
+
+
+async def test_history_survives_reload(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """After unload and setup the history is back and the undo button is available."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    await _set_setpoint(hass, 55)
+    await hass.async_block_till_done()
+    assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    assert _history(mock_config_entry)[-1]["new"] == "55"
+    button = er.async_get(hass).async_get_entity_id("button", DOMAIN, "1234_undo")
+    assert button
+    assert hass.states.get(button).state != "unavailable"
+
+
+async def test_undo_under_dry_run_changes_nothing(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """Undo goes through the pipeline: with dry run on it only logs and keeps the record."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    await _set_setpoint(hass, 55)
+    hass.config_entries.async_update_entry(mock_config_entry, options={CONF_DRY_RUN: True})
+    button = er.async_get(hass).async_get_entity_id("button", DOMAIN, "1234_undo")
+    assert button
+    await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
+    assert mock_client.write_value.await_count == 1
+    assert _history(mock_config_entry)[-1]["result"] == "dry_run"
+    assert "undone" not in _history(mock_config_entry)[-2]
+
+
+async def test_expert_parameter_needs_expert_access(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """AccessLevel 2 may write user parameters but not expert ones."""
+    mock_client.get_system_state.return_value = SystemState(True, 2)
+    mock_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(mock_config_entry, options={CONF_DRY_RUN: False})
+    er.async_get(hass).async_get_or_create(
+        "number", DOMAIN, "1234_36000600001", config_entry=mock_config_entry, disabled_by=None
+    )  # enable Sparfaktor before setup
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    with pytest.raises(ServiceValidationError) as err:
+        await hass.services.async_call(
+            "number",
+            "set_value",
+            {"entity_id": _entity_id(hass, "number", 36000600001), "value": 1.5},
+            blocking=True,
+        )
+    assert err.value.translation_key == "access_denied"
+    await _set_setpoint(hass, 55)
+    assert mock_client.write_value.await_count == 1
+
+
+async def test_no_op_compares_numerically(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """'50.0' and '50,0' are the same as 50."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    coordinator = mock_config_entry.runtime_data.coordinators[1234]
+    for current in ("50.0", "50,0"):
+        coordinator.data[DHW_SETPOINT] = current
+        await _set_setpoint(hass, 50)
+    mock_client.write_value.assert_not_called()
+
+
+def test_same_value_edge_cases(description: dict[str, Any]) -> None:
+    """Unknown or unparsable current values never count as equal."""
+    parameters = parse_description(description).parameters
+    setpoint, program = parameters[DHW_SETPOINT], parameters[PROGRAM]
+    assert same_value(setpoint, None, "50") is False
+    assert same_value(setpoint, "--", "50") is False
+    assert same_value(setpoint, "50.0", "50") is True
+    assert same_value(setpoint, "50.5", "50,5") is True
+    assert same_value(program, " 1 ", "1") is True
+    assert same_value(program, None, "1") is False
+
+
+async def test_rate_limit_survives_reload(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """The hourly budget is counted from the persisted history."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False, CONF_MAX_WRITES_PER_HOUR: 1})
+    await _set_setpoint(hass, 55)
+    await hass.async_block_till_done()
+    assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    with pytest.raises(HomeAssistantError) as err:
+        await _set_setpoint(hass, 56)
+    assert err.value.translation_key == "rate_limited"
+
+
+async def test_rate_limit_ignores_records_without_time(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    hass_storage: dict[str, Any],
+) -> None:
+    """Records written by 0.2.0.dev1 carry no time; they neither count nor crash."""
+    hass_storage[f"{DOMAIN}.{mock_config_entry.entry_id}.history"] = {
+        "version": 1,
+        "key": f"{DOMAIN}.{mock_config_entry.entry_id}.history",
+        "data": {"history": [{"result": "ok", "old": "50", "new": "51"}]},
+    }
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False, CONF_MAX_WRITES_PER_HOUR: 1})
+    await _set_setpoint(hass, 55)
+    assert mock_client.write_value.await_count == 1
+
+
+def test_format_number_normalises_signed_zero() -> None:
+    """-0.0 would be sent as '-0'."""
+    assert format_number(-0.0) == "0"
+    assert format_number(0.0) == "0"
+    assert format_number(20.5) == "20.5"
+
+
+async def test_undo_of_an_unparsable_value_is_a_validation_error(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    hass_storage: dict[str, Any],
+) -> None:
+    """A corrupt old value raises a translated error instead of ValueError."""
+    hass_storage[f"{DOMAIN}.{mock_config_entry.entry_id}.history"] = {
+        "version": 1,
+        "key": f"{DOMAIN}.{mock_config_entry.entry_id}.history",
+        "data": {
+            "history": [
+                {
+                    "result": "ok",
+                    "system_id": 1234,
+                    "parameter_id": DHW_SETPOINT,
+                    "value_id": DHW_SETPOINT,
+                    "label": "x",
+                    "old": "abc",
+                    "new": "55",
+                    "source": "entity",
+                }
+            ]
+        },
+    }
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    button = er.async_get(hass).async_get_entity_id("button", DOMAIN, "1234_undo")
+    assert button
+    with pytest.raises(ServiceValidationError) as err:
+        await hass.services.async_call("button", "press", {"entity_id": button}, blocking=True)
+    assert err.value.translation_key == "invalid_number"
+
+
+async def test_failed_writes_count_towards_the_budget(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """A write the portal rejected still consumed a request; the next one is rate-limited."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False, CONF_MAX_WRITES_PER_HOUR: 1})
+    mock_client.write_value = AsyncMock(side_effect=ApiError(4, "offline"))
+    with pytest.raises(HomeAssistantError) as err:
+        await _set_setpoint(hass, 55)
+    assert err.value.translation_key == "write_failed"
+    with pytest.raises(HomeAssistantError) as err:
+        await _set_setpoint(hass, 56)
+    assert err.value.translation_key == "rate_limited"
+    assert mock_client.write_value.await_count == 1

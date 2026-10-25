@@ -23,7 +23,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import WolfConfigEntry, WolfSystemCoordinator
 from .entity import WolfEntity, add_entities, parse_number
-from .model import CT_HIDDEN, CT_NUMERIC, Kind, Parameter
+from .model import CT_NUMERIC, Kind, Parameter
 
 PARALLEL_UPDATES = 0
 
@@ -79,10 +79,7 @@ class WolfSensor(WolfEntity, SensorEntity):
     def __init__(self, coordinator: WolfSystemCoordinator, parameter: Parameter) -> None:
         """Device class and unit from the Wolf unit; enums from the list items."""
         super().__init__(coordinator, parameter)
-        self._numeric = parameter.unit is not None or parameter.control_type in (
-            CT_NUMERIC,
-            CT_HIDDEN,
-        )
+        self._numeric = parameter.unit is not None or parameter.control_type == CT_NUMERIC
         if parameter.kind is Kind.ENUM:
             self._attr_device_class = SensorDeviceClass.ENUM
             self._attr_options = list(dict.fromkeys(parameter.options.values()))

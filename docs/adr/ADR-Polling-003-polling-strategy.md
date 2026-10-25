@@ -77,3 +77,4 @@ Full requests are proven by core `wolflink`; delta polling with the cursor has s
 
 - [ADR-Client-001: Own thin API client](ADR-Client-001-own-thin-api-client.md)
 - [ADR-Writes-004: Write confirmation and rejected writes](ADR-Writes-004-write-confirmation-and-rejected-writes.md)
+- [ADR-Client-014: Login backoff across client instances](ADR-Client-014-login-backoff.md)

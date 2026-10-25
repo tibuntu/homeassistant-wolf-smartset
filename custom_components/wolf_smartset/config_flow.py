@@ -29,6 +29,7 @@ import probatio
 from .api import (
     MAX_PASSWORD_LENGTH,
     AuthError,
+    LoginFailed,
     PortalUnavailable,
     System,
     TooManyRequests,
@@ -82,7 +83,7 @@ async def _validate(
         return await _fetch_systems(username, password)
     except AuthError:
         errors["base"] = "invalid_auth"
-    except TooManyRequests, PortalUnavailable:
+    except TooManyRequests, PortalUnavailable, LoginFailed:
         errors["base"] = "portal_unavailable"
     except WolfError:
         errors["base"] = "cannot_connect"

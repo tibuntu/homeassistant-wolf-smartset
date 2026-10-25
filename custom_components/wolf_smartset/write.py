@@ -7,6 +7,7 @@ value at least CONFIRM_AFTER_SECONDS after the write confirms or corrects it.
 
 import asyncio
 from collections.abc import Callable
+from datetime import timedelta
 import math
 import time
 from typing import TYPE_CHECKING, Any
@@ -47,9 +48,47 @@ RESULT_RATE_LIMITED = "rate_limited"
 RESULT_ERROR = "error"
 RESULT_NOT_APPLIED = "not_applied"
 
+# Keys of portal responses that identify the installation, the account or the session:
+# the identifier fields plus the personal fields scripts/record_fixtures.py redacts.
+_ID_KEYS = frozenset(
+    {
+        "SystemId",
+        "GatewayId",
+        "SessionId",
+        "Id",
+        "SystemShareId",
+        "GatewayUsername",
+        "SerialNumber",
+        "Name",
+        "Description",
+        "Comment",
+        "ContactInformation",
+        "Email",
+        "UserName",
+        "Firstname",
+        "Surname",
+        "Street",
+        "City",
+        "ZipCode",
+        "Phone",
+    }
+)
+REDACTED = "**REDACTED**"
+
+
+def redact_ids(data: Any) -> Any:
+    """Replace identifiers in a portal response so the record can be shared."""
+    if isinstance(data, list):
+        return [redact_ids(item) for item in data]
+    if isinstance(data, dict):
+        return {k: REDACTED if k in _ID_KEYS else redact_ids(v) for k, v in data.items()}
+    return data
+
 
 def format_number(value: float) -> str:
     """48.0 -> '48', 20.5 -> '20.5' (the portal sends plain decimal strings)."""
+    if value == 0:
+        value = 0.0  # never '-0'
     return f"{value:.6f}".rstrip("0").rstrip(".")
 
 
@@ -59,7 +98,9 @@ def same_value(parameter: Parameter, current: str | None, target: str) -> bool:
         return False
     if parameter.kind is Kind.NUMBER:
         try:
-            return math.isclose(float(current.replace(",", ".")), float(target), abs_tol=1e-6)
+            return math.isclose(
+                float(current.replace(",", ".")), float(target.replace(",", ".")), abs_tol=1e-6
+            )
         except ValueError:
             return False
     return current.strip() == target
@@ -76,22 +117,27 @@ def validate(parameter: Parameter, target: str, access_level: int | None) -> Non
     if not parameter.writable or parameter.kind not in (Kind.NUMBER, Kind.SELECT, Kind.SWITCH):
         raise _error("not_writable", name=parameter.label)
     required = ACCESS_EXPERT_WRITE if parameter.expert else ACCESS_USER_WRITE
-    if access_level is not None and access_level < required:
+    if access_level is None or access_level < required:
         raise _error("access_denied", name=parameter.label)
     if parameter.kind is not Kind.NUMBER:
         if target not in parameter.selectable:
             raise _error("invalid_option", name=parameter.label, value=target)
         return
-    minimum, maximum, value = parameter.minimum, parameter.maximum, float(target)
-    if minimum is None or maximum is None or not minimum <= value <= maximum:
+    minimum, maximum, step = parameter.minimum, parameter.maximum, parameter.step
+    if minimum is None or maximum is None or step is None:
+        raise _error("not_writable", name=parameter.label)
+    try:
+        value = float(target.replace(",", "."))
+    except ValueError:
+        raise _error("invalid_number", name=parameter.label, value=target) from None
+    if not minimum <= value <= maximum:
         raise _error(
             "out_of_range",
             name=parameter.label,
             value=target,
-            min=format_number(minimum or 0),
-            max=format_number(maximum or 0),
+            min=format_number(minimum),
+            max=format_number(maximum),
         )
-    step = parameter.step or 1.0
     steps = (value - minimum) / step
     if not math.isclose(steps, round(steps), abs_tol=1e-6):
         raise _error("invalid_step", name=parameter.label, value=target, step=format_number(step))
@@ -107,7 +153,6 @@ class WriteManager:
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.history"
         )
         self._lock = asyncio.Lock()
-        self._writes: list[float] = []
         self._pending: dict[tuple[int, int], tuple[float, dict[str, Any]]] = {}
         self._listeners: list[Callable[[], None]] = []
         self.history: list[dict[str, Any]] = []
@@ -121,6 +166,17 @@ class WriteManager:
     def max_writes_per_hour(self) -> int:
         """Rolling one-hour limit for real writes."""
         return int(self._entry.options.get(CONF_MAX_WRITES_PER_HOUR, DEFAULT_MAX_WRITES_PER_HOUR))
+
+    def _writes_last_hour(self) -> int:
+        """Real write attempts (applied, not applied or failed) recorded during the last hour."""
+        cutoff = dt_util.utcnow() - timedelta(hours=1)
+        return sum(
+            1
+            for record in self.history
+            if record.get("result") in (RESULT_OK, RESULT_NOT_APPLIED, RESULT_ERROR)
+            and (written := dt_util.parse_datetime(record.get("time") or "")) is not None
+            and written >= cutoff
+        )
 
     async def async_load(self) -> None:
         """Restore the history after a restart."""
@@ -175,8 +231,7 @@ class WriteManager:
                 )
                 return await self._record(record, RESULT_DRY_RUN)
             now = time.monotonic()
-            self._writes = [t for t in self._writes if now - t < 3600]
-            if len(self._writes) >= self.max_writes_per_hour:
+            if self._writes_last_hour() >= self.max_writes_per_hour:
                 await self._record(record, RESULT_RATE_LIMITED)
                 raise HomeAssistantError(
                     translation_domain=DOMAIN,
@@ -191,7 +246,7 @@ class WriteManager:
                 target,
             )
             try:
-                await coordinator.client.write_value(
+                response = await coordinator.client.write_value(
                     coordinator.system,
                     parameter.bundle_id,
                     parameter.value_id,
@@ -206,7 +261,7 @@ class WriteManager:
                     translation_key="write_failed",
                     translation_placeholders={"name": parameter.label, "error": str(err)},
                 ) from err
-            self._writes.append(now)
+            record["response"] = redact_ids(response)
             # Optimistic: show the new value now; the next poll confirms or corrects it.
             if coordinator.data is not None:
                 coordinator.data[parameter.value_id] = target

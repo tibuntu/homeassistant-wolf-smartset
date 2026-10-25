@@ -1,15 +1,25 @@
 """Config flow, reauth and options."""
 
+from typing import Any
 from unittest.mock import MagicMock
 
+from homeassistant import data_entry_flow
 from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import config_validation as cv
+import probatio
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.wolf_smartset.api import AuthError, PortalUnavailable, System
+from custom_components.wolf_smartset.api import (
+    AuthError,
+    CannotConnect,
+    LoginFailed,
+    PortalUnavailable,
+    System,
+)
 from custom_components.wolf_smartset.const import (
     CONF_DRY_RUN,
     CONF_MAX_WRITES_PER_HOUR,
@@ -49,7 +59,11 @@ async def test_system_selection(hass: HomeAssistant, mock_client: MagicMock) -> 
 
 @pytest.mark.parametrize(
     ("error", "key"),
-    [(AuthError("x"), "invalid_auth"), (PortalUnavailable("x"), "portal_unavailable")],
+    [
+        (AuthError("x"), "invalid_auth"),
+        (PortalUnavailable("x"), "portal_unavailable"),
+        (LoginFailed("x"), "portal_unavailable"),
+    ],
 )
 async def test_errors_recover(
     hass: HomeAssistant, mock_client: MagicMock, error: Exception, key: str
@@ -111,6 +125,103 @@ async def test_options(
     )
     assert mock_config_entry.options == {
         CONF_SCAN_INTERVAL: 300,
+        CONF_DRY_RUN: False,
+        CONF_MAX_WRITES_PER_HOUR: 5,
+    }
+
+
+async def test_other_wolf_error_is_cannot_connect(
+    hass: HomeAssistant, mock_client: MagicMock
+) -> None:
+    """A WolfError without a dedicated message shows 'cannot_connect'."""
+    mock_client.get_systems.side_effect = CannotConnect("x")
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
+    assert result["errors"] == {"base": "cannot_connect"}
+
+
+async def test_reauth_with_wrong_password_shows_error(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """A rejected new password keeps the reauth form open with an error."""
+    mock_config_entry.add_to_hass(hass)
+    result = await mock_config_entry.start_reauth_flow(hass)
+    mock_client.get_systems.side_effect = AuthError("x")
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_PASSWORD: "wrong"}
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reauth_confirm"
+    assert result["errors"] == {"base": "invalid_auth"}
+    assert mock_config_entry.data[CONF_PASSWORD] == "secret"
+
+
+async def test_unexpected_error(hass: HomeAssistant, mock_client: MagicMock) -> None:
+    """Anything that is not a WolfError shows 'unknown' and is logged."""
+    mock_client.get_systems.side_effect = RuntimeError("boom")
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "unknown"}
+
+
+async def test_no_systems(hass: HomeAssistant, mock_client: MagicMock) -> None:
+    """An account without systems cannot be added."""
+    mock_client.get_systems.return_value = []
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "no_systems"
+
+
+async def test_no_system_selected(hass: HomeAssistant, mock_client: MagicMock) -> None:
+    """An empty selection shows the systems step again with an error."""
+    mock_client.get_systems.return_value = [SYSTEM, System(99, 98, "Cabin", 7)]
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {CONF_SYSTEMS: []})
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "systems"
+    assert result["errors"] == {"base": "no_system_selected"}
+
+
+@pytest.mark.parametrize(
+    "user_input",
+    [
+        {CONF_SCAN_INTERVAL: 10, CONF_DRY_RUN: True, CONF_MAX_WRITES_PER_HOUR: 5},
+        {CONF_SCAN_INTERVAL: 120, CONF_DRY_RUN: True, CONF_MAX_WRITES_PER_HOUR: 0},
+        {CONF_SCAN_INTERVAL: 120, CONF_DRY_RUN: True, CONF_MAX_WRITES_PER_HOUR: 61},
+    ],
+)
+async def test_options_are_validated(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    user_input: dict[str, Any],
+) -> None:
+    """NumberSelector refuses values outside min and max server-side (review finding 10)."""
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    with pytest.raises(data_entry_flow.InvalidData):
+        await hass.config_entries.options.async_configure(result["flow_id"], user_input)
+
+
+async def test_options_accept_floats(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """The number selector delivers floats; they are stored as integers; the form serializes."""
+    mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    fields = probatio.to_field_list(result["data_schema"], custom_serializer=cv.custom_serializer)
+    assert len(fields) == 3
+    await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {CONF_SCAN_INTERVAL: 120.0, CONF_DRY_RUN: False, CONF_MAX_WRITES_PER_HOUR: 5.0},
+    )
+    assert mock_config_entry.options == {
+        CONF_SCAN_INTERVAL: 120,
         CONF_DRY_RUN: False,
         CONF_MAX_WRITES_PER_HOUR: 5,
     }

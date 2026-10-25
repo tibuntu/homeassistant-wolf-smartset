@@ -52,7 +52,7 @@
         "data_description": {
           "scan_interval": "Seconds between polls. Wolf allows at most one poll per minute.",
           "dry_run": "While on, changes are only logged (INFO) with parameter, old and new value; nothing is sent to the heating system.",
-          "max_writes_per_hour": "Protects the controller's EEPROM against automation loops. Writes that are skipped because the value is already set do not count."
+          "max_writes_per_hour": "Protects the controller's EEPROM against automation loops. Writes that are skipped because the value is already set do not count. Failed writes count."
         }
       }
     }
@@ -70,6 +70,9 @@
     "out_of_range": {
       "message": "{value} is outside the range of {name} ({min} to {max})."
     },
+    "invalid_number": {
+      "message": "{value} is not a number for {name}."
+    },
     "invalid_step": {
       "message": "{value} does not match the step {step} of {name}."
     },
@@ -85,8 +88,8 @@
   },
   "issues": {
     "throttled": {
-      "title": "Wolf SmartSet throttles {system}",
-      "description": "Wolf SmartSet answered several polls with throttling or empty responses. The integration polls less often until the portal answers again. Check that no other client logs in with this account from your network."
+      "title": "Wolf SmartSet throttles {system} or blocks the login",
+      "description": "Wolf SmartSet answered several polls with throttling or empty responses, or the login is blocked after repeated failures. The integration polls less often until the portal answers again. Check that no other client logs in with this account from your network."
     },
     "wolflink_active": {
       "title": "Core Wolf SmartSet Service integration is active",

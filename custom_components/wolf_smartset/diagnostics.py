@@ -25,6 +25,7 @@ async def async_get_config_entry_diagnostics(
         "client": {
             "login_count": runtime.client.login_count,
             "last_login": runtime.client.last_login and runtime.client.last_login.isoformat(),
+            "login_blocked_seconds": runtime.client.login_blocked_seconds,
         },
         "writes": {
             "dry_run": runtime.writer.dry_run,
