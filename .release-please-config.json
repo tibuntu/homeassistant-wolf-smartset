@@ -46,6 +46,11 @@
           "type": "json",
           "path": "custom_components/wolf_smartset/manifest.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "toml",
+          "path": "uv.lock",
+          "jsonpath": "$.package[?(@.name.value=='homeassistant-wolf-smartset')].version"
         }
       ],
       "bump-minor-pre-major": true
