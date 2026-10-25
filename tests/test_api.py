@@ -43,6 +43,7 @@ class FakePortal:
     def __init__(self) -> None:
         self.password = "secret"
         self.logins = 0
+        self.requests = 0
         self.calls: list[str] = []
         self.api: dict[str, Callable[[httpx.Request], httpx.Response]] = {}
         self.login_page = LOGIN_PAGE
@@ -51,6 +52,7 @@ class FakePortal:
         self.token_body: dict[str, Any] | None = None
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests += 1
         url = str(request.url)
         if url.startswith(f"{AUTH_URL}/connect/authorize"):
             self.state = request.url.params["state"]
@@ -228,10 +230,12 @@ async def test_failed_login_blocks_further_attempts(client: WolfClient, portal: 
     portal.token_status = 502
     with pytest.raises(CannotConnect):
         await client.get_systems()
+    requests = portal.requests
     for _ in range(4):
         with pytest.raises(LoginFailed):
             await client.get_systems()
     assert portal.logins == 1
+    assert portal.requests == requests  # the blocked calls made no HTTP request at all
     assert portal.calls == []
     assert 0 < client.login_blocked_seconds <= LOGIN_BACKOFF_SECONDS
     assert _login_backoff["user"][1] == 1
