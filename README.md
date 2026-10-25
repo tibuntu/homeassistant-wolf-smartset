@@ -52,7 +52,7 @@ Every write ends up in the non-volatile memory (EEPROM) of the Wolf controller. 
 - **One write at a time.**
 - **Optimistic state with confirmation.** The new value shows immediately. The first poll at least 30 s after the write confirms it (`confirmed: true` in the history) or restores the value the controller reports (`confirmed: false`, a warning in the log).
 - **History** of the last 200 attempts in `.storage/wolf_smartset.<entry_id>.history`, the last 50 in the diagnostics; an **Undo last change** button.
-- **Login backoff.** After a failed login the integration waits five minutes, doubling up to an hour, before it logs in again ([ADR-Client-014](docs/adr/ADR-Client-014-login-backoff.md)).
+- **Login backoff.** After a failed login the integration waits five minutes, doubling up to an hour, before it logs in again ([ADR-Client-014](docs/adr/ADR-Client-014-login-backoff.md)). A wrong password is exempt: it opens the re-authentication prompt instead.
 
 Expert (Fachmann) parameters are written without an expert login. Whether the controller applies them is unproven; the history shows `confirmed: false` when it does not. Wrong settings, in particular expert parameters, can make the system inefficient or uncomfortable. Use at your own risk.
 
@@ -68,13 +68,12 @@ Settings › Devices & services › Wolf SmartSet › three-dot menu › *Delete
 - Entity names are Wolf's German labels, the same as in the SmartSet app and the manuals.
 - The interface is unofficial. Wolf changes the login flow several times a year; a broken login shows as "portal unavailable" until a fix is released.
 - Only one installation (Wolf CHA heat pump with BM-2 and MM1, Link home gateway) has been tested so far.
+- The icon under `brand/` is a neutral placeholder. An entry in [home-assistant/brands](https://github.com/home-assistant/brands) is a follow-up.
 
 ## Troubleshooting
 
-- **Repair issue "throttles"**: the portal answered several polls with throttling or empty responses. The integration polls less often until the portal answers again. Check that no other client logs in with this account from your network.
+- **Repair issue "throttles … or blocks the login"**: the portal answered several polls with throttling or empty responses, or the login is blocked after repeated failures (five minutes, doubling up to an hour). The integration polls less often until the portal answers again. Check that no other client logs in with this account from your network.
 - **Repair issue "core integration is active"**: disable the core integration for the same account (see Installation).
 - **Re-authentication prompt**: the portal rejected the password. Enter the current one.
 - **Diagnostics**: Settings › Devices & services › Wolf SmartSet › three-dot menu › *Download diagnostics*. The file contains the parsed parameter model, the write history and login statistics, with credentials and identifiers redacted.
 - **A write shows "not applied"**: the controller reported another value after the write. Expert parameters may need an expert session; user-level parameters may be limited by a dependent setting in the controller.
-
-The icon under `brand/` is a neutral placeholder. An entry in [home-assistant/brands](https://github.com/home-assistant/brands) is a follow-up.

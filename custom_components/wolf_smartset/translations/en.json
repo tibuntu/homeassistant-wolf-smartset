@@ -88,8 +88,8 @@
   },
   "issues": {
     "throttled": {
-      "title": "Wolf SmartSet throttles {system}",
-      "description": "Wolf SmartSet answered several polls with throttling or empty responses. The integration polls less often until the portal answers again. Check that no other client logs in with this account from your network."
+      "title": "Wolf SmartSet throttles {system} or blocks the login",
+      "description": "Wolf SmartSet answered several polls with throttling or empty responses, or the login is blocked after repeated failures. The integration polls less often until the portal answers again. Check that no other client logs in with this account from your network."
     },
     "wolflink_active": {
       "title": "Core Wolf SmartSet Service integration is active",

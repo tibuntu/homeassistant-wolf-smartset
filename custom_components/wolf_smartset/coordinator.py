@@ -122,7 +122,9 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
             raise ConfigEntryAuthFailed(str(err)) from err
         except (TooManyRequests, PortalUnavailable, LoginFailed) as err:
             self._back_off()
-            raise UpdateFailed(f"Wolf SmartSet throttles requests: {err}") from err
+            raise UpdateFailed(
+                f"Wolf SmartSet throttles requests or blocks the login: {err}"
+            ) from err
         except WolfError as err:
             raise UpdateFailed(f"Error communicating with Wolf SmartSet: {err}") from err
         if self.backoff_steps:
@@ -208,7 +210,9 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
         self.backoff_steps += 1
         self.update_interval = min(self._interval * 2**self.backoff_steps, MAX_BACKOFF)
         LOGGER.warning(
-            "Wolf SmartSet throttles %s, next poll in %s", self.system.name, self.update_interval
+            "Wolf SmartSet throttles %s or blocks its login, next poll in %s",
+            self.system.name,
+            self.update_interval,
         )
         if self.backoff_steps >= BACKOFF_ISSUE_STEPS:
             ir.async_create_issue(

@@ -88,8 +88,8 @@
   },
   "issues": {
     "throttled": {
-      "title": "Wolf SmartSet drosselt {system}",
-      "description": "Wolf SmartSet hat mehrere Abfragen mit Drosselung oder leeren Antworten beantwortet. Die Integration fragt seltener ab, bis das Portal wieder antwortet. Prüfe, ob ein anderer Client sich mit diesem Konto aus deinem Netz anmeldet."
+      "title": "Wolf SmartSet drosselt {system} oder blockiert die Anmeldung",
+      "description": "Wolf SmartSet hat mehrere Abfragen mit Drosselung oder leeren Antworten beantwortet, oder die Anmeldung ist nach wiederholten Fehlern gesperrt. Die Integration fragt seltener ab, bis das Portal wieder antwortet. Prüfe, ob ein anderer Client sich mit diesem Konto aus deinem Netz anmeldet."
     },
     "wolflink_active": {
       "title": "Core-Integration Wolf SmartSet Service ist aktiv",
