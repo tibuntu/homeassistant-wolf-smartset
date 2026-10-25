@@ -577,4 +577,23 @@ Quelle: erster echter Write-Test am 25.10.2026 (Freigabe des Eigentümers), Writ
 1. Der Parameter ist lesbar und beschreibbar. Das Portal bietet ihn als Liste „Aus“/„Ein“ an (`ControlType 1`) und beschreibt ihn so: „Der Warmwasserspeicher wird für eine Stunde auf die eingestellte Warmwassertemperatur aufgeheizt.“
 2. Schreiben von 0 beendet die 1x-Funktion: Der Status wechselt von „1x Warmwasser“ zurück auf „Ein“. Dass die Ladung danach weiterlief, liegt an der normalen Warmwasser-Anforderung. Sie lief schon vor dem Test, also gibt der Test keinen Beleg, dass 1x überhaupt eine Ladung ausgelöst hat.
 3. Die Meldung „weiterhin 1x Warmwasser“ nach dem Ausschalten stammt vom Poll, der während des 17 s langen Writes lief. Seit 0.2.0 behält die Integration den geschriebenen Wert bei Polls in den ersten 30 s (ADR-Writes-013).
-4. **Offen:** Ob sich 22004200000 nach einer Stunde oder nach Erreichen der Solltemperatur selbst auf 0 zurücksetzt, ist nicht beobachtet. Der Test dafür braucht einen Write: einschalten bei geladenem Speicher und ohne weiteres Eingreifen über mehr als eine Stunde pollen. Bis dahin bleibt der Parameter ein `switch`: Er hat einen lesbaren Zustand, der sich abbrechen lässt. Ein `button` würde das Abbrechen verlieren.
+4. Ob und wann sich 22004200000 selbst zurücksetzt, klärt der zweite Test (Abschnitt 15).
+
+## 15. Nachtrag 2026-10-25: Zweiter Test „1x Warmwasser“ ohne laufende Ladung
+
+Freigabe des Eigentümers; ein einziger Write, danach nur Polls. Ausgangslage 18:48: Warmwasser-Programm außerhalb des Zeitfensters („Warmwasser Status“ = „Aus“), Ventil auf „Heizen“, Speicher 44,6 °C bei 48 °C Soll. Ab etwa 18:53 wurde gebadet (große Warmwasser-Entnahme), daher der Temperaturabfall.
+
+| Zeit | Ereignis |
+|---|---|
+| 18:50:12 | Write 22004200000 = 1; Antwort nach etwa 18 s. Historie `confirmed: null`. |
+| 18:52:29 | Poll: Ventil „Warmwasser“, Verdichter „Betrieb“, Status „1x Warmwasser“, 22004200000 = 1 (`confirmed: true`, `read_back: "1"`). |
+| 18:56 | Speicher 30,0 °C (Entnahme beim Baden). |
+| 19:04:44 | Speicher 35,0 °C, Verdichter 36 Hz, Status weiter „1x Warmwasser“. |
+| 19:06:48 | **22004200000 = 0** ohne Write (weder Integration noch, nach Kenntnis des Eigentümers, Bedienmodul, App oder Portal). Status „Aus“, Ventil „Heizen“, Verdichter „Sperrzeit“, 0 Hz. Speicher 37,2 °C. |
+| 19:08:48 | Verdichter „Standby“. |
+
+**Ergebnis:**
+
+1. „1x Warmwasser“ startet eine Ladung selbst: Ventil und Verdichter schalten innerhalb eines Poll-Intervalls auf Warmwasser.
+2. Die Regelung setzt den Parameter selbst auf 0 zurück. Hier nach etwa 16 Minuten, bei 37 °C, also weder nach der im Portal genannten Stunde noch bei Solltemperatur. Was das Ende ausgelöst hat, zeigen die gepollten Werte nicht.
+3. Zusammen mit Abschnitt 14: Der Parameter hat einen lesbaren Zustand, die Regelung beendet ihn selbst, und Schreiben von 0 beendet ihn vorzeitig.
