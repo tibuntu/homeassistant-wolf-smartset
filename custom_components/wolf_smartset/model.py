@@ -111,7 +111,11 @@ class Parameter:
     @property
     def kind(self) -> Kind | None:
         """Entity platform, or None when the parameter is not mapped."""
-        if self.parameter_id in KNOWN_SWITCHES and set(self.options) == {"0", "1"}:
+        if (
+            self.parameter_id in KNOWN_SWITCHES
+            and self.writable
+            and set(self.options) == {"0", "1"}
+        ):
             return Kind.SWITCH
         ct = self.control_type
         if ct in LIST_CONTROL_TYPES or (ct == CT_COMBO_IMAGE and self.options):

@@ -160,3 +160,10 @@ def test_tab_without_bundle_id_is_skipped(
         parameters = parse_description(description).parameters
     assert 35000900000 not in parameters
     assert "Warmwasser" in caplog.text
+
+
+def test_known_switch_needs_write_access(description: dict[str, Any]) -> None:
+    """A read-only '1x Warmwasser' is an enum sensor, not a switch that always fails."""
+    for descriptor in _descriptors(description, 22004200000):
+        descriptor["IsReadOnly"] = True
+    assert parse_description(description).parameters[22004200000].kind is Kind.ENUM
