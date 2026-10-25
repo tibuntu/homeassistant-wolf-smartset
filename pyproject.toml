@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.14"
 
 [dependency-groups]
-dev = ["pytest-homeassistant-custom-component==0.13.372", "ruff"]
+dev = ["pytest-homeassistant-custom-component==0.13.375", "ruff"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
