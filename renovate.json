@@ -1,0 +1,79 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>tibuntu/renovate-presets",
+    "github>tibuntu/renovate-presets:automerge",
+    "github>tibuntu/renovate-presets:semanticCommitType(*, build)",
+    "github>tibuntu/renovate-presets:githubActionsCommitType"
+  ],
+  "pre-commit": {
+    "enabled": true
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["on sunday"]
+  },
+  "packageRules": [
+    {
+      "matchFileNames": ["pyproject.toml"],
+      "semanticCommitScope": "deps",
+      "groupName": "dev dependencies"
+    },
+    {
+      "matchUpdateTypes": ["patch"],
+      "groupName": "patch updates",
+      "schedule": ["on sunday"]
+    },
+    {
+      "description": "Home Assistant test plugin pins homeassistant; keep hacs.json minimum in mind when it moves",
+      "matchDepNames": ["pytest-homeassistant-custom-component", "homeassistant", "pytest", "pytest-asyncio"],
+      "groupName": "homeassistant",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "matchManagers": ["pre-commit"],
+      "groupName": "pre-commit hooks",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "semanticCommitScope": "deps-actions"
+    },
+    {
+      "matchDepNames": ["ruff", "astral-sh/ruff-pre-commit"],
+      "groupName": "ruff",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "matchDepNames": ["mypy"],
+      "groupName": "mypy",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "matchDepNames": ["bandit", "pycqa/bandit"],
+      "groupName": "bandit",
+      "semanticCommitScope": "deps"
+    },
+    {
+      "description": "Python must match the Home Assistant container image (3.14)",
+      "matchDepNames": ["python"],
+      "groupName": "python",
+      "semanticCommitScope": "deps",
+      "allowedVersions": "<3.15"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track the Python version in CI workflows and pre-commit",
+      "managerFilePatterns": ["/\\.github/workflows/.*\\.ya?ml$/", "/^\\.pre-commit-config\\.yaml$/"],
+      "matchStrings": [
+        "PYTHON_VERSION:\\s*[\"'](?<currentValue>[0-9.]+)[\"']",
+        "\\n  python: python(?<currentValue>3\\.[0-9]+)\\n"
+      ],
+      "depNameTemplate": "python",
+      "datasourceTemplate": "docker"
+    }
+  ]
+}

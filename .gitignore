@@ -6,3 +6,10 @@ __pycache__/
 .ruff_cache/
 .coverage
 .DS_Store
+*.egg-info/
+htmlcov/
+coverage.xml
+.idea/
+.vscode/
+secrets.yaml
+*.log

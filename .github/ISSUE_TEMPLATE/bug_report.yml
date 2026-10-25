@@ -1,0 +1,56 @@
+name: Bug report
+description: Report a problem with the Wolf SmartSet integration
+labels: ["bug"]
+body:
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you start
+      options:
+        - label: I have searched existing issues and this has not been reported yet
+          required: true
+        - label: The core "Wolf SmartSet Service" integration is disabled for this account
+          required: false
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected to happen instead.
+    validations:
+      required: true
+  - type: input
+    id: integration-version
+    attributes:
+      label: Integration version
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.10.4"
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Wolf system
+      description: Heat generator, control unit and gateway, for example "CHA-10, BM-2, Link home".
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: |
+        Settings › Devices & services › Wolf SmartSet › ⋮ › Download diagnostics, then attach the file.
+        It contains no credentials or system IDs.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: |
+        Enable debug logging under Settings › Devices & services › Wolf SmartSet › Enable debug logging.
+        Remove your username before posting.
+      render: shell

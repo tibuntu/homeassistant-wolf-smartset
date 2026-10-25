@@ -1,0 +1,47 @@
+# Install with: uv run pre-commit install
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.1
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # mypy needs Home Assistant installed, so it runs in the project environment.
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: uv run --frozen mypy custom_components/
+        language: system
+        files: ^custom_components/.*\.py$
+        pass_filenames: false
+
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.9.4
+    hooks:
+      - id: bandit
+        args: [-c, pyproject.toml]
+        additional_dependencies: ["bandit[toml]"]
+        files: ^custom_components/
+
+  # Recorded fixtures must never contain the redacted identifiers in clear text.
+  - repo: local
+    hooks:
+      - id: fixture-redaction
+        name: Fixtures contain no gateway serial or real IDs
+        entry: scripts/check-fixtures.sh
+        language: script
+        files: ^tests/fixtures/
+        pass_filenames: false
+
+default_language_version:
+  python: python3.14
