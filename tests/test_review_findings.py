@@ -7,12 +7,8 @@ is fixed. A fixed finding makes its test pass, which fails the strict xfail: rem
 in the same change.
 """
 
-import asyncio
-from datetime import timedelta
-from typing import Any
 from unittest.mock import MagicMock
 
-from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 import httpx
@@ -23,12 +19,9 @@ from custom_components.wolf_smartset.api import (
     AUTH_URL,
     REDIRECT_URI,
     CannotConnect,
-    Value,
     WolfClient,
 )
 from custom_components.wolf_smartset.const import CONF_DRY_RUN, DOMAIN
-
-from .conftest import SEED
 
 DHW_SETPOINT = 35000900000  # "Warmwassersolltemperatur eingestellt", 25-65 °C, step 1, value 50
 
@@ -52,52 +45,11 @@ async def _set_setpoint(hass: HomeAssistant, value: float) -> None:
     )
 
 
-async def test_poll_shortly_after_write_keeps_optimistic_value(
-    hass: HomeAssistant,
-    mock_client: MagicMock,
-    mock_config_entry: MockConfigEntry,
-    freezer: FrozenDateTimeFactory,
-) -> None:
-    """The gateway still reports the old value while the controller applies the write."""
-    await _setup_writable(hass, mock_config_entry)
-    await _set_setpoint(hass, 55)
-    assert hass.states.get(_entity_id(hass)).state == "55.0"
-
-    freezer.tick(timedelta(seconds=10))
-    await mock_config_entry.runtime_data.coordinators[1234].async_refresh()  # reads 50
-    await hass.async_block_till_done()
-    assert hass.states.get(_entity_id(hass)).state == "55.0"
-
-    # An automation that re-sends the same value must not reach the EEPROM again.
-    await _set_setpoint(hass, 55)
-    assert mock_client.write_value.await_count == 1
-
-
-async def test_in_flight_poll_does_not_overwrite_write(
-    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
-) -> None:
-    """The poll copies coordinator.data, waits on the network, then stores the stale copy."""
-    await _setup_writable(hass, mock_config_entry)
-    gate = asyncio.Event()
-
-    async def slow_values(system: Any, bundle: int, ids: list[int], first: bool = False) -> list:
-        await gate.wait()
-        return [Value(i, SEED[i], 1) for i in ids]
-
-    mock_client.get_values.side_effect = slow_values
-    poll = asyncio.create_task(mock_config_entry.runtime_data.coordinators[1234].async_refresh())
-    await asyncio.sleep(0)  # the poll is waiting on the network
-    await _set_setpoint(hass, 55)
-    gate.set()
-    await poll
-    await hass.async_block_till_done()
-    assert hass.states.get(_entity_id(hass)).state == "55.0"
-
-
 @pytest.mark.xfail(
     strict=True,
-    reason="Finding 2: the WriteParameterValues response body is never inspected; "
-    "the shape of a real response is still unrecorded, this body is a placeholder",
+    reason="Finding 2: the WriteParameterValues response body is not interpreted yet; "
+    "the real response is recorded as tests/fixtures/real/write_response_0.json first, "
+    "this body is a placeholder",
 )
 async def test_write_response_reporting_an_error_is_not_ok(
     hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry

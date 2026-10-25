@@ -47,6 +47,19 @@ RESULT_RATE_LIMITED = "rate_limited"
 RESULT_ERROR = "error"
 RESULT_NOT_APPLIED = "not_applied"
 
+# Keys of portal responses that identify the installation or the session.
+_ID_KEYS = frozenset({"SystemId", "GatewayId", "SessionId", "Id", "SystemShareId"})
+REDACTED = "**REDACTED**"
+
+
+def redact_ids(data: Any) -> Any:
+    """Replace identifiers in a portal response so the record can be shared."""
+    if isinstance(data, list):
+        return [redact_ids(item) for item in data]
+    if isinstance(data, dict):
+        return {k: REDACTED if k in _ID_KEYS else redact_ids(v) for k, v in data.items()}
+    return data
+
 
 def format_number(value: float) -> str:
     """48.0 -> '48', 20.5 -> '20.5' (the portal sends plain decimal strings)."""
@@ -191,7 +204,7 @@ class WriteManager:
                 target,
             )
             try:
-                await coordinator.client.write_value(
+                response = await coordinator.client.write_value(
                     coordinator.system,
                     parameter.bundle_id,
                     parameter.value_id,
@@ -207,6 +220,7 @@ class WriteManager:
                     translation_placeholders={"name": parameter.label, "error": str(err)},
                 ) from err
             self._writes.append(now)
+            record["response"] = redact_ids(response)
             # Optimistic: show the new value now; the next poll confirms or corrects it.
             if coordinator.data is not None:
                 coordinator.data[parameter.value_id] = target

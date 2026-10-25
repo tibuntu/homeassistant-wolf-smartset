@@ -295,3 +295,54 @@ async def test_undo_restores_previous_value(
     assert [c.args[3] for c in mock_client.write_value.call_args_list] == ["55", "50"]
     assert _history(mock_config_entry)[-2]["undone"] is True
     assert _history(mock_config_entry)[-1]["source"] == "undo"
+
+
+@pytest.mark.parametrize(
+    ("response", "expected"),
+    [
+        (
+            {
+                "Values": [{"ValueId": DHW_SETPOINT, "Value": "55", "State": 1}],
+                "SystemId": 1234,
+                "GatewayId": 5678,
+            },
+            {
+                "Values": [{"ValueId": DHW_SETPOINT, "Value": "55", "State": 1}],
+                "SystemId": "**REDACTED**",
+                "GatewayId": "**REDACTED**",
+            },
+        ),
+        (
+            [{"ValueId": DHW_SETPOINT, "State": 1, "SessionId": 42}],
+            [{"ValueId": DHW_SETPOINT, "State": 1, "SessionId": "**REDACTED**"}],
+        ),
+    ],
+)
+async def test_write_response_is_kept_redacted(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    hass_storage: dict[str, Any],
+    response: Any,
+    expected: Any,
+) -> None:
+    """The portal's answer lands in the record and in .storage without identifiers."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    mock_client.write_value.return_value = response
+    await _set_setpoint(hass, 55)
+
+    assert _history(mock_config_entry)[-1]["response"] == expected
+    await hass.async_block_till_done()
+    stored = hass_storage[f"{DOMAIN}.{mock_config_entry.entry_id}.history"]["data"]["history"]
+    assert stored[-1]["response"] == expected
+
+
+async def test_only_applied_writes_carry_a_response(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """Dry runs and no-ops never talked to the portal, so they have no response."""
+    await _setup(hass, mock_config_entry)  # dry run
+    await _set_setpoint(hass, 55)
+    assert "response" not in _history(mock_config_entry)[-1]
+    await _set_setpoint(hass, 50)  # no-op
+    assert "response" not in _history(mock_config_entry)[-1]
