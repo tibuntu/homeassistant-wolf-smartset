@@ -149,7 +149,6 @@ class WolfSmartsetConfigFlow(ConfigFlow, domain=DOMAIN):
             data={**self._credentials, CONF_SYSTEMS: [asdict(s) for s in systems]},
         )
 
-    @override
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
         """The portal rejected the stored password."""
         return await self.async_step_reauth_confirm()

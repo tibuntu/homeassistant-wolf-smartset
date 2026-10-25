@@ -166,10 +166,10 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
                 )
                 self.unreadable.add(value_ids[0])
                 return []
-            values: list[Value] = []
+            isolated: list[Value] = []
             for value_id in value_ids:
-                values += await self._read_bundle(bundle_id, [value_id])
-            return values
+                isolated += await self._read_bundle(bundle_id, [value_id])
+            return isolated
         self._started_bundles.add(bundle_id)
         return values
 

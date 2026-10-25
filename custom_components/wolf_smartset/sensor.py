@@ -32,7 +32,7 @@ T = SensorStateClass.TOTAL_INCREASING
 D = SensorDeviceClass
 
 # Wolf unit -> (device class, HA unit, state class)
-UNITS: dict[str, tuple[D | None, str, SensorStateClass | None]] = {
+UNITS: dict[str, tuple[SensorDeviceClass | None, str, SensorStateClass | None]] = {
     "°C": (D.TEMPERATURE, UnitOfTemperature.CELSIUS, M),
     "bar": (D.PRESSURE, UnitOfPressure.BAR, M),
     "Pa": (D.PRESSURE, UnitOfPressure.PA, M),
@@ -57,8 +57,8 @@ def unit_mapping(
     parameter: Parameter,
 ) -> tuple[SensorDeviceClass | None, str, SensorStateClass | None]:
     """Device class, HA unit and state class for a parameter with a Wolf unit."""
-    assert parameter.unit is not None
-    device_class, unit, state_class = UNITS.get(parameter.unit, (None, parameter.unit, None))
+    wolf_unit = parameter.unit or ""
+    device_class, unit, state_class = UNITS.get(wolf_unit, (None, wolf_unit, None))
     # Closed periods (Vortag, Vorjahr, ...) may drop; total_increasing would read
     # every drop as a meter reset (ADR-Model-008).
     return device_class, unit, None if parameter.snapshot else state_class

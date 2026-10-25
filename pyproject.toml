@@ -1,23 +1,62 @@
 [project]
-name = "wolf-smartset"
+name = "homeassistant-wolf-smartset"
 version = "0.1.0"
-requires-python = ">=3.14"
+description = "Home Assistant integration for Wolf heating systems via the Wolf SmartSet cloud"
+readme = "README.md"
+requires-python = ">=3.14.2"
+license = "Apache-2.0"
 
 [dependency-groups]
-dev = ["pytest-homeassistant-custom-component==0.13.375", "ruff"]
+dev = [
+    # Pins homeassistant, pytest, pytest-asyncio and pytest-cov
+    "pytest-homeassistant-custom-component==0.13.375",
+    "ruff==0.17.1",
+    "mypy==2.4.0",
+    "bandit[toml]==1.9.4",
+    "pre-commit==4.7.0",
+]
 
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = ["tests"]
+[tool.uv]
+package = false
 
 [tool.ruff]
 line-length = 100
 target-version = "py314"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+select = ["E", "W", "F", "I", "C4", "B", "UP", "SIM", "RUF", "PIE", "PLE", "PLW", "G", "TID252"]
 
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
 combine-as-imports = true
 known-first-party = ["custom_components"]
+
+[tool.mypy]
+python_version = "3.14"
+platform = "linux"
+show_error_codes = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unreachable = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+pythonpath = ["."]
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+    "--cov=custom_components.wolf_smartset",
+    "--cov-branch",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-fail-under=85",
+]
+
+[tool.coverage.run]
+source = ["custom_components/wolf_smartset"]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]

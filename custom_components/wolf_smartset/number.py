@@ -29,7 +29,8 @@ class WolfNumber(WolfEntity, NumberEntity):
     def __init__(self, coordinator: WolfSystemCoordinator, parameter: Parameter) -> None:
         """Limits are guaranteed by Parameter.kind."""
         super().__init__(coordinator, parameter)
-        assert parameter.minimum is not None and parameter.maximum is not None
+        if parameter.minimum is None or parameter.maximum is None:
+            raise ValueError(f"Parameter {parameter.parameter_id} has no limits")
         self._attr_native_min_value = parameter.minimum
         self._attr_native_max_value = parameter.maximum
         self._attr_native_step = parameter.step or 1.0
