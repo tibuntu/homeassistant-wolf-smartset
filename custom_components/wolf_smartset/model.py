@@ -1,6 +1,6 @@
 """Parameter model built from the raw GetGuiDescriptionForGateway response.
 
-No Home Assistant imports. See docs/adr/ADR-Model-008 and ADR-Model-009.
+No Home Assistant imports. See docs/adr/ADR-Model-011 and ADR-Model-010.
 """
 
 from collections import Counter
@@ -35,8 +35,6 @@ SNAPSHOT_PATTERN = re.compile(r"\b(Vortag|Vormonat|Vorjahr|Vorvorjahr)\b")
 METER_PATTERN = re.compile(r"^(Verbrauch|JAZ|TAZ|MAZ)\b")
 # Optional inputs that report no value when the sensor is not connected.
 OPTIONAL_INPUTS = frozenset({"Raumtemperatur"})
-# Device by ValueId prefix needs this many assigned parameters, all on one device.
-PREFIX_MIN_EVIDENCE = 3
 
 
 class Kind(StrEnum):
@@ -61,6 +59,7 @@ class Occurrence:
     read_only: bool
     control_type: int
     device: str | None
+    schema: bool = False  # from SchemaTabViewConfigDTO: metadata only, never writable
 
 
 @dataclass
@@ -87,12 +86,9 @@ class Parameter:
     tab: str = ""
     device: str | None = None
     label: str = ""
+    port_function: str | None = None  # schema port text without the port name
+    duplicate_of: int | None = None  # tab parameter showing the same function
     occurrences: list[Occurrence] = field(default_factory=list)
-
-    @property
-    def schema_only(self) -> bool:
-        """Only shown as a port in the overview schema (ControlType 0 everywhere)."""
-        return all(o.control_type == CT_COMBO_IMAGE for o in self.occurrences)
 
     @property
     def snapshot(self) -> bool:
@@ -101,10 +97,10 @@ class Parameter:
 
     @property
     def enabled_by_default(self) -> bool:
-        """Expert, schema-only, meter-dependent and optional-input values start disabled."""
+        """Expert, duplicate-port, meter-dependent and optional-input values start disabled."""
         return not (
             self.expert
-            or self.schema_only
+            or self.duplicate_of is not None
             or METER_PATTERN.match(self.name)
             or self.name in OPTIONAL_INPUTS
         )
@@ -180,7 +176,7 @@ def _clean_group(group: str | None) -> str | None:
 
 
 def parse_description(raw: dict[str, Any]) -> Description:
-    """Build the parameter model; see ADR-Model-008 for the rules."""
+    """Build the parameter model; see ADR-Model-011 for the rules."""
     found: dict[int, list[tuple[Occurrence, dict[str, Any]]]] = {}
     svg_units: dict[int, str] = {}
     devices: dict[str, str] = {}
@@ -191,16 +187,28 @@ def parse_description(raw: dict[str, Any]) -> Description:
                 for item in schema.get("parameters") or []:
                     if item.get("unit"):
                         svg_units[item["valueId"]] = item["unit"]
-            for descriptor in _flatten(tab.get("ParameterDescriptors") or []):
+            descriptors = [(d, False) for d in _flatten(tab.get("ParameterDescriptors") or [])]
+            # The device configuration schema repeats ports with list items, units and
+            # ProtGrp, but without IsReadOnly (ADR-Model-010).
+            schema_config = tab.get("SchemaTabViewConfigDTO") or {}
+            for config in schema_config.get("Configs") or []:
+                descriptors += [(d, True) for d in config.get("Parameters") or []]
+            seen_schema: set[int] = set()
+            for descriptor, schema in descriptors:
                 if not _is_data_point(descriptor):
                     continue
+                if schema:
+                    if descriptor["ParameterId"] in seen_schema:
+                        continue  # every hydraulic configuration repeats the port
+                    seen_schema.add(descriptor["ParameterId"])
                 occurrence = Occurrence(
                     tab=tab.get("TabName") or "",
                     bundle_id=int(tab.get("BundleId") or 1000),
                     expert=bool(tab.get("IsExpertView")),
-                    read_only=descriptor.get("IsReadOnly", True) is not False,
+                    read_only=schema or descriptor.get("IsReadOnly", True) is not False,
                     control_type=int(descriptor.get("ControlType", -1)),
                     device=device,
+                    schema=schema,
                 )
                 found.setdefault(descriptor["ParameterId"], []).append((occurrence, descriptor))
         for sub in menu.get("SubMenuEntries") or []:
@@ -213,7 +221,7 @@ def parse_description(raw: dict[str, Any]) -> Description:
     for menu in raw.get("MenuItems") or []:
         walk(menu, None)
 
-    # ProtGrp -> device most often seen with it (ADR-Model-009 rule 2).
+    # ProtGrp -> device most often seen with it (ADR-Model-010 rule 2).
     prot_devices: dict[str, Counter[str]] = {}
     for entries in found.values():
         for occurrence, descriptor in entries:
@@ -230,9 +238,15 @@ def parse_description(raw: dict[str, Any]) -> Description:
             ),
             None,
         )
-        primary = writable or next(
-            ((o, d) for o, d in entries if o.control_type not in (CT_COMBO_IMAGE, CT_HIDDEN)),
-            entries[0],
+        # Tab descriptors win over the schema configuration, which only fills gaps
+        # such as list items of overview ports.
+        meaningful = [
+            (o, d) for o, d in entries if o.control_type not in (CT_COMBO_IMAGE, CT_HIDDEN)
+        ]
+        primary = (
+            writable
+            or next(((o, d) for o, d in meaningful if not o.schema), None)
+            or next(iter(meaningful), entries[0])
         )
         occurrence, descriptor = primary
         if occurrence.control_type == CT_HIDDEN:
@@ -275,30 +289,41 @@ def parse_description(raw: dict[str, Any]) -> Description:
             expert=all(o.expert for o, _ in entries),
             tab=occurrence.tab,
             device=device,
+            port_function=next(
+                (f for _, d in entries if (f := _port_function(d)) is not None), None
+            ),
             occurrences=[o for o, _ in entries],
         )
 
-    _assign_devices_by_prefix(parameters)
+    _mark_duplicate_ports(parameters)
     _assign_labels([p for p in parameters.values() if p.kind])
     return Description(parameters, devices)
 
 
-def _assign_devices_by_prefix(parameters: dict[int, Parameter]) -> None:
-    """ValueId prefix -> device, only where every assigned parameter agrees.
+def _port_function(descriptor: dict[str, Any]) -> str | None:
+    """'MKP Mischerkreispumpe' with port 'MKP' -> 'Mischerkreispumpe'."""
+    port, text = descriptor.get("PortName"), descriptor.get("PortDesc")
+    if not port or not text:
+        return None
+    words = text.split()
+    if words and words[0] == port:
+        words = words[1:]
+    elif words and words[-1] == port:
+        words = words[:-1]
+    return " ".join(words) or None
 
-    The leading digits of a ValueId name the bus device type (for example 27 heat
-    generator, 36 mixer circuit of the BM-2, 4 mixer module). See ADR-Model-009.
-    """
-    by_prefix: dict[int, Counter[str]] = {}
+
+def _mark_duplicate_ports(parameters: dict[int, Parameter]) -> None:
+    """A schema port whose function is the name of another tab parameter is a duplicate."""
+    tab_names = {
+        p.name: p.parameter_id
+        for p in parameters.values()
+        if any(not o.schema and o.control_type != CT_COMBO_IMAGE for o in p.occurrences)
+    }
     for parameter in parameters.values():
-        if parameter.device:
-            by_prefix.setdefault(parameter.value_id // 10**9, Counter())[parameter.device] += 1
-    for parameter in parameters.values():
-        devices = by_prefix.get(parameter.value_id // 10**9)
-        if parameter.device is None and devices and len(devices) == 1:
-            device, count = devices.most_common(1)[0]
-            if count >= PREFIX_MIN_EVIDENCE:
-                parameter.device = device
+        other = tab_names.get(parameter.port_function or "")
+        if other is not None and other != parameter.parameter_id:
+            parameter.duplicate_of = other
 
 
 def _assign_labels(parameters: list[Parameter]) -> None:

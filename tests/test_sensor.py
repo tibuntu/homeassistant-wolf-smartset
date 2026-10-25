@@ -1,4 +1,4 @@
-"""Sensor mapping rules (ADR-Model-008)."""
+"""Sensor mapping rules (ADR-Model-011)."""
 
 import json
 

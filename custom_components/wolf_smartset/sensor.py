@@ -60,7 +60,7 @@ def unit_mapping(
     wolf_unit = parameter.unit or ""
     device_class, unit, state_class = UNITS.get(wolf_unit, (None, wolf_unit, None))
     # Closed periods (Vortag, Vorjahr, ...) may drop; total_increasing would read
-    # every drop as a meter reset (ADR-Model-008).
+    # every drop as a meter reset (ADR-Model-011).
     return device_class, unit, None if parameter.snapshot else state_class
 
 

@@ -1,4 +1,4 @@
-"""Parameter model against the heat-pump description (ADR-Model-008, ADR-Model-009)."""
+"""Parameter model against the heat-pump description (ADR-Model-011, ADR-Model-010)."""
 
 from typing import Any
 
@@ -12,7 +12,7 @@ def test_one_time_dhw_is_a_switch(description: dict[str, Any]) -> None:
         Kind.SWITCH,
         True,
         1000,
-        "bedienmodul_bm_2_0",  # ValueId prefix 22, see ADR-Model-009
+        None,  # no submenu, ProtGrp or schema evidence: system device (ADR-Model-010)
         False,
     )
     assert p.options == {"0": "Aus", "1": "Ein"}
@@ -77,15 +77,26 @@ def test_slugify() -> None:
     assert slugify("Heizgerät") == "heizgerat"
 
 
-def test_device_by_value_id_prefix(description: dict[str, Any]) -> None:
-    """Prefixes with unanimous evidence get a device; prefix 35 (DHW) has none."""
+def test_device_needs_data_evidence(description: dict[str, Any]) -> None:
+    """Schema configuration ports give a device; no ValueId-prefix guessing."""
     parameters = parse_description(description).parameters
-    assert parameters[36005100001].device == "bedienmodul_bm_2_0"  # Programmwahl Heizung
-    assert parameters[36002900001].device == "bedienmodul_bm_2_0"  # Sollwertkorrektur
     assert parameters[27004800001].device == "heizgerat"  # Verdichterfrequenz
-    assert parameters[4000100001].device == "mischermodul_mm1"  # MKP Mischerkreispumpe
-    for dhw in (35000900000, 35001200000, 35000100000):
-        assert parameters[dhw].device is None  # system device
+    assert parameters[4000100001].device == "mischermodul_mm1"  # Ausgang MKP
+    for system_level in (22004200000, 36005100001, 36002900001, 4007000001, 35000900000):
+        assert parameters[system_level].device is None
+
+
+def test_schema_ports_get_list_items_and_duplicates(description: dict[str, Any]) -> None:
+    """Overview ports take list items from the schema configuration."""
+    parameters = parse_description(description).parameters
+    motor, pump = parameters[4000200001], parameters[4000100001]
+    assert (motor.kind, motor.options) == (Kind.ENUM, {"0": "Aus", "1": "Zu", "2": "Auf"})
+    assert (pump.kind, pump.port_function, pump.duplicate_of) == (
+        Kind.ENUM,
+        "Mischerkreispumpe",
+        4007000001,
+    )
+    assert not pump.writable and not motor.writable
 
 
 def test_enabled_by_default(description: dict[str, Any]) -> None:
@@ -93,14 +104,18 @@ def test_enabled_by_default(description: dict[str, Any]) -> None:
     parameters = parse_description(description).parameters
     disabled = {p.label for p in parameters.values() if p.kind and not p.enabled_by_default}
     assert {
-        "Verdichterfrequenz",
-        "MKP Mischerkreispumpe",
-        "Mischermotor MM",
+        "Ausgang MKP",
         "Verbrauch Vortag",
         "JAZ aktuelles Jahr",
         "TAZ Vortag",
         "MAZ aktueller Monat",
         "Raumtemperatur",
     } <= disabled
-    for kept in ("Erzeugte Wärmemenge Vortag", "Mischerkreispumpe", "1x Warmwasser"):
+    for kept in (
+        "Erzeugte Wärmemenge Vortag",
+        "Mischerkreispumpe",
+        "1x Warmwasser",
+        "Verdichterfrequenz",
+        "Mischermotor",
+    ):
         assert kept not in disabled

@@ -168,12 +168,12 @@ async def test_device_change_keeps_entity(
     )
     registry = er.async_get(hass)
     old = registry.async_get_or_create(
-        "switch",
+        "sensor",
         DOMAIN,
-        "1234_22004200000",
+        "1234_27004800001",
         config_entry=mock_config_entry,
         device_id=system.id,
-        suggested_object_id="zuhause_one_time_dhw_charge",
+        suggested_object_id="zuhause_verdichterfrequenz",
     )
 
     await hass.config_entries.async_setup(mock_config_entry.entry_id)
@@ -182,7 +182,7 @@ async def test_device_change_keeps_entity(
     new = registry.async_get(old.entity_id)
     assert new is not None
     assert (new.id, new.unique_id, new.entity_id) == (old.id, old.unique_id, old.entity_id)
-    bm2 = dr.async_get_device_id_by_identifier(
-        hass, (DOMAIN, "1234_bedienmodul_bm_2_0"), config_entry_id=mock_config_entry.entry_id
+    heat_generator = dr.async_get_device_id_by_identifier(
+        hass, (DOMAIN, "1234_heizgerat"), config_entry_id=mock_config_entry.entry_id
     )
-    assert new.device_id == bm2 != system.id
+    assert new.device_id == heat_generator != system.id

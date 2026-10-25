@@ -1,4 +1,4 @@
-"""Known one-time actions, e.g. '1x Warmwasser' (ADR-Model-008)."""
+"""Known one-time actions, e.g. '1x Warmwasser' (ADR-Model-011)."""
 
 from typing import Any
 
