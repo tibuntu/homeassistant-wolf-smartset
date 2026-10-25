@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-Model-011](ADR-Model-011-parameter-model-entity-mapping-and-naming.md)
 
 ## Date
 
@@ -90,3 +90,4 @@ The rules for default enablement are name-based or structural, never tied to thi
 - [ADR-Model-002: Parameter model and entity mapping](ADR-Model-002-parameter-model-and-entity-mapping.md) — superseded by this ADR
 - [ADR-Model-009: Device assignment with ValueId prefixes](ADR-Model-009-device-assignment-with-value-id-prefixes.md)
 - [ADR-Polling-003: Polling strategy](ADR-Polling-003-polling-strategy.md)
+- [ADR-Model-011](ADR-Model-011-parameter-model-entity-mapping-and-naming.md) — supersedes this ADR

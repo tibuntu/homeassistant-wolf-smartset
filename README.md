@@ -6,12 +6,12 @@ Full documentation (German and English, risks, disclaimer, tested systems) follo
 
 ## Entities disabled by default
 
-Some parameters exist in every description but only carry data on some installations. There is no generic signal in the Wolf data to tell them apart (see [ADR-Model-008](docs/adr/ADR-Model-008-parameter-model-entity-mapping-and-naming.md)), so these entities start disabled. Enable the ones that apply to your system under Settings › Devices & services › Wolf SmartSet › Entities.
+Some parameters exist in every description but only carry data on some installations. There is no generic signal in the Wolf data to tell them apart (see [ADR-Model-011](docs/adr/ADR-Model-011-parameter-model-entity-mapping-and-naming.md)), so these entities start disabled. Enable the ones that apply to your system under Settings › Devices & services › Wolf SmartSet › Entities.
 
 | Group | Example | Why disabled |
 |---|---|---|
 | Expert (Fachmann) parameters | Sparfaktor, Heizkurve | several hundred values; may need an expert session to stay current |
-| Overview schema ports | Verdichterfrequenz, MKP Mischerkreispumpe | duplicate tab values under another ID |
+| Overview schema ports that duplicate a tab parameter | Ausgang MKP (duplicates Mischerkreispumpe) | same function under another ID |
 | Statistics that need an S0 electricity meter (WP110) | Verbrauch …, JAZ, TAZ, MAZ | stay 0 without a meter |
 | Optional sensor inputs | Raumtemperatur | no value without a room sensor at the control unit |
 | Network and identity values | IP-Adresse, MAC-Adresse | diagnostic only |

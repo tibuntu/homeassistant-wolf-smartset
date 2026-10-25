@@ -10,15 +10,16 @@
 
 ### Changed
 
-- **Device assignment.** Parameters without an expert submenu now get the device of their ValueId prefix when every other parameter with that prefix sits on the same device ([ADR-Model-009](docs/adr/ADR-Model-009-device-assignment-with-value-id-prefixes.md)). "Programmwahl (Heizung)", "Sollwertkorrektur" and "1x Warmwasser" move to the BM-2. The overview schema ports move to the heat generator or the mixer module. The DHW parameters stay on the system device, because neither the prefixes nor the schema data name a device for them ([discovery, section 12](docs/discovery.md)). Entity IDs, unique IDs and history are unchanged; only the device changes.
-- **Names.** All entities use the Wolf labels ([ADR-Model-008](docs/adr/ADR-Model-008-parameter-model-entity-mapping-and-naming.md)). "One-time DHW charge" is now "1x Warmwasser"; its entity ID `switch.<system>_one_time_dhw_charge` stays. Labels are unique per system, so a few friendly names gain a suffix, for example "Außentemperatur (Heizung)". No entity ID changes.
-- **Entities disabled by default** for new installations: overview schema ports, statistics that need an S0 electricity meter, and "Raumtemperatur" (see [README](README.md#entities-disabled-by-default)).
+- **Device assignment.** Devices come only from data that names them: the expert submenu, the device schema configuration or `ProtGrp` ([ADR-Model-010](docs/adr/ADR-Model-010-device-assignment-from-data-evidence.md)). The overview schema ports move to the heat generator or the mixer module. The user-level controls for heating and DHW, including "1x Warmwasser", stay on the system device, because no data names a module for them ([discovery, sections 12 and 13](docs/discovery.md)). Entity IDs, unique IDs and history are unchanged; only the device changes.
+- **Overview schema ports show text values.** "Mischermotor" shows Aus/Zu/Auf and "Ausgang MKP" Aus/Ein instead of raw numbers; list items and units come from the device schema configuration. Their names change from "Mischermotor MM" and "MKP Mischerkreispumpe" to the Wolf labels "Mischermotor" and "Ausgang MKP".
+- **Names.** All entities use the Wolf labels ([ADR-Model-011](docs/adr/ADR-Model-011-parameter-model-entity-mapping-and-naming.md)). "One-time DHW charge" is now "1x Warmwasser"; its entity ID `switch.<system>_one_time_dhw_charge` stays. Labels are unique per system, so a few friendly names gain a suffix, for example "Außentemperatur (Heizung)". No entity ID changes.
+- **Entities disabled by default** for new installations: overview schema ports that duplicate a tab parameter ("Ausgang MKP"), statistics that need an S0 electricity meter, and "Raumtemperatur" (see [README](README.md#entities-disabled-by-default)). "Verdichterfrequenz" and "Mischermotor" stay enabled.
 
 ### Upgrade notes
 
 **Entities that are now disabled by default.** Home Assistant applies "disabled by default" only when an entity is created. On installations that ran 0.1.0, these entities stay enabled:
 
-- Verdichterfrequenz, MKP Mischerkreispumpe, Mischermotor MM
+- Ausgang MKP (formerly "MKP Mischerkreispumpe")
 - Verbrauch aktueller Monat, Verbrauch aktuelles Jahr, Verbrauch Vortag, Verbrauch Vorjahr, Verbrauch Vorvorjahr
 - JAZ aktuelles Jahr, JAZ Vorjahr, JAZ Vorvorjahr, MAZ aktueller Monat, TAZ Vortag
 - Raumtemperatur

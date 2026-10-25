@@ -527,3 +527,33 @@ Die wichtigsten Befunde:
 - Die Felder `hdt`/`hdi` (vermutlich „host device type/index“) nennen für `WWSystem` den Wärmeerzeuger `CHA 1` als Host, nicht das BM-2. Der Vorlagenname hätte damit auf das falsche Gerät gezeigt. Für eine Zuordnung taugen auch `hdt`/`hdi` nicht, weil die Verbindung zwischen Präfix 35 und dem Schema-Gerät `WWSystem` in den Daten fehlt.
 
 **Entscheidung** (nach der vorgegebenen Regel): Die Warmwasser-Parameter bleiben am System-Gerät. Es gibt kein logisches Gerät „Warmwasser“ und keine Zuordnung über Schema-Listen, weil die Prüfung negativ ist. Der Code bleibt unverändert. `test_device_by_value_id_prefix` sichert ab, dass Präfix 35 am System-Gerät bleibt.
+
+## 13. Nachtrag 2026-10-25: Beleg für das Gerät von „1x Warmwasser“ und die Schema-Konfiguration
+
+**Frage:** Die Präfix-Regel (ADR-Model-009) hatte `22004200000` („1x Warmwasser“), `36005100001` („Programmwahl (Heizung)“), `36002900001` („Sollwertkorrektur“) und `4007000001` („Mischerkreispumpe“) einem Modul-Gerät zugeordnet. Gibt es dafür einen Beleg in den Daten?
+
+**Geprüfte Quellen** für alle vier ValueIds in der aufgezeichneten Beschreibung:
+
+| Quelle | Ergebnis |
+|---|---|
+| Fachmann-Untermenüs (`MenuItems[1].SubMenuEntries[*].TabViews[*].ParameterDescriptors`) | kein Vorkommen |
+| `ProtGrp` an einem ihrer Deskriptoren | nicht gesetzt |
+| `SVGHeatingSchemaConfigDevices[*].parameters` | kein Vorkommen (siehe Abschnitt 12) |
+| `SchemaTabViewConfigDTO.Configs[*].Parameters` (Geräte-Schemakonfiguration) | kein Vorkommen |
+
+**Ergebnis: kein Beleg.** Die vier Parameter gehören ans System-Gerät. Die Präfix-Regel entfällt (ADR-Model-010).
+
+**Neu gefunden: die Geräte-Schemakonfiguration.** Expert-Tabs mit Anlagenschema enthalten `SchemaTabViewConfigDTO.Configs[]`: je Hydraulik-Konfiguration eine Liste der Klemmen mit `PortName`, `PortDesc`, `ProtGrp`, `Unit` und `ListItems`, ohne `IsReadOnly`. Ausschnitt der aufgezeichneten Anlage (ein Eintrag je Port, gekürzt; jede Konfiguration wiederholt die Ports):
+
+```json
+// Untermenü "Heizgerät", Tab "Heizgerät"
+{"ValueId": 27004800001, "Name": "Verdichterfrequenz", "PortName": "----", "PortDesc": "Verdichterfrequenz",
+ "ControlType": 6, "Unit": "Hz", "ProtGrp": "HG <1>"}
+// Untermenü "Mischermodul MM1", Tab "Mischermodul MM1"
+{"ValueId": 4000100001, "Name": "Ausgang MKP", "PortName": "MKP", "PortDesc": "MKP Mischerkreispumpe",
+ "ControlType": 1, "ProtGrp": "MM <1>", "ListItems": [{"Value": "0", "DisplayText": "Aus"}, {"Value": "1", "DisplayText": "Ein"}]}
+{"ValueId": 4000200001, "Name": "Mischermotor", "PortName": "MM", "PortDesc": "Mischermotor MM",
+ "ControlType": 1, "ProtGrp": "MM <1>", "ListItems": [{"Value": "0", "DisplayText": "Aus"}, {"Value": "1", "DisplayText": "Zu"}, {"Value": "2", "DisplayText": "Auf"}]}
+```
+
+Abgedeckt sind auf dieser Anlage elf ValueIds unter „Heizgerät“ und drei unter „Mischermodul MM1“, genau die Ports der Übersicht. Damit erhalten die Übersichts-Ports Gerät, Einheit und Klartext-Werte aus den Daten (ADR-Model-010, ADR-Model-011). `PortDesc` minus `PortName` ergibt die Funktion: „Mischerkreispumpe“ ist zugleich der Name des Tab-Parameters `4007000001`, „Ausgang MKP“ ist also ein Duplikat und startet deaktiviert.

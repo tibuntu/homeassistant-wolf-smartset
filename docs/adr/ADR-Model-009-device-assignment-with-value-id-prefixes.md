@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-Model-010](ADR-Model-010-device-assignment-from-data-evidence.md)
 
 ## Date
 
@@ -74,3 +74,4 @@ Rule 3 uses only evidence from the same description and applies only where that 
 
 - [ADR-Model-007: One HA device per expert submenu](ADR-Model-007-device-per-expert-submenu.md) — superseded by this ADR
 - [ADR-Model-008: Parameter model, entity mapping and naming](ADR-Model-008-parameter-model-entity-mapping-and-naming.md)
+- [ADR-Model-010](ADR-Model-010-device-assignment-from-data-evidence.md) — supersedes this ADR
