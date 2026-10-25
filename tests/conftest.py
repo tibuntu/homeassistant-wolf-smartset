@@ -12,14 +12,17 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.wolf_smartset.api import System, SystemState
+from custom_components.wolf_smartset.api import System, SystemState, Value
 from custom_components.wolf_smartset.const import CONF_SYSTEMS, DOMAIN
+from custom_components.wolf_smartset.model import parse_description
 
 FIXTURES = Path(__file__).parent / "fixtures"
 DESCRIPTION: dict[str, Any] = json.loads(
     (FIXTURES / "description_heatpump.json").read_text(encoding="utf-8")
 )
 SYSTEM = System(id=1234, gateway_id=5678, name="Home", share_id=None)
+# Values the fake portal returns: those embedded in the description, else "0".
+SEED = {p.value_id: p.value or "0" for p in parse_description(DESCRIPTION).parameters.values()}
 
 
 @pytest.fixture(autouse=True)
@@ -72,7 +75,10 @@ def mock_client(description: dict[str, Any]) -> Generator[MagicMock]:
         client.get_systems = AsyncMock(return_value=[SYSTEM])
         client.get_system_state = AsyncMock(return_value=SystemState(True, 4))
         client.get_description = AsyncMock(return_value=description)
-        client.get_values = AsyncMock(return_value=[])
+        # Every requested value comes back with State OK, like the portal.
+        client.get_values = AsyncMock(
+            side_effect=lambda system, bundle, ids, first=False: [Value(i, SEED[i], 1) for i in ids]
+        )
         client.close = AsyncMock()
         client.login_count = 1
         client.last_login = None

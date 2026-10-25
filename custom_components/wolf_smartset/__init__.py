@@ -48,6 +48,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> bool
 
     entry.runtime_data = WolfRuntimeData(http, client, coordinators)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # The first refresh ran before any entity was listening; poll the enabled
+    # parameters now instead of waiting a full interval with unknown states.
+    for coordinator in coordinators.values():
+        await coordinator.async_refresh()
     return True
 
 

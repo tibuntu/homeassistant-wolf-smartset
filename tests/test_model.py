@@ -1,4 +1,4 @@
-"""Parameter model against the heat-pump description (ADR-Model-002, ADR-Model-007)."""
+"""Parameter model against the heat-pump description (ADR-Model-008, ADR-Model-009)."""
 
 from typing import Any
 
@@ -12,7 +12,7 @@ def test_one_time_dhw_is_a_switch(description: dict[str, Any]) -> None:
         Kind.SWITCH,
         True,
         1000,
-        None,
+        "bedienmodul_bm_2_0",  # ValueId prefix 22, see ADR-Model-009
         False,
     )
     assert p.options == {"0": "Aus", "1": "Ein"}
@@ -75,3 +75,32 @@ def test_slugify() -> None:
     """Device keys are ASCII."""
     assert slugify("Bedienmodul BM-2 0") == "bedienmodul_bm_2_0"
     assert slugify("Heizgerät") == "heizgerat"
+
+
+def test_device_by_value_id_prefix(description: dict[str, Any]) -> None:
+    """Prefixes with unanimous evidence get a device; prefix 35 (DHW) has none."""
+    parameters = parse_description(description).parameters
+    assert parameters[36005100001].device == "bedienmodul_bm_2_0"  # Programmwahl Heizung
+    assert parameters[36002900001].device == "bedienmodul_bm_2_0"  # Sollwertkorrektur
+    assert parameters[27004800001].device == "heizgerat"  # Verdichterfrequenz
+    assert parameters[4000100001].device == "mischermodul_mm1"  # MKP Mischerkreispumpe
+    for dhw in (35000900000, 35001200000, 35000100000):
+        assert parameters[dhw].device is None  # system device
+
+
+def test_enabled_by_default(description: dict[str, Any]) -> None:
+    """Expert, schema-only, meter-dependent and optional-input values start disabled."""
+    parameters = parse_description(description).parameters
+    disabled = {p.label for p in parameters.values() if p.kind and not p.enabled_by_default}
+    assert {
+        "Verdichterfrequenz",
+        "MKP Mischerkreispumpe",
+        "Mischermotor MM",
+        "Verbrauch Vortag",
+        "JAZ aktuelles Jahr",
+        "TAZ Vortag",
+        "MAZ aktueller Monat",
+        "Raumtemperatur",
+    } <= disabled
+    for kept in ("Erzeugte Wärmemenge Vortag", "Mischerkreispumpe", "1x Warmwasser"):
+        assert kept not in disabled

@@ -53,6 +53,17 @@ UNITS: dict[str, tuple[D | None, str, SensorStateClass | None]] = {
 }
 
 
+def unit_mapping(
+    parameter: Parameter,
+) -> tuple[SensorDeviceClass | None, str, SensorStateClass | None]:
+    """Device class, HA unit and state class for a parameter with a Wolf unit."""
+    assert parameter.unit is not None
+    device_class, unit, state_class = UNITS.get(parameter.unit, (None, parameter.unit, None))
+    # Closed periods (Vortag, Vorjahr, ...) may drop; total_increasing would read
+    # every drop as a meter reset (ADR-Model-008).
+    return device_class, unit, None if parameter.snapshot else state_class
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: WolfConfigEntry,
@@ -81,12 +92,11 @@ class WolfSensor(WolfEntity, SensorEntity):
             self._attr_entity_registry_enabled_default = False
             self._numeric = False
         elif parameter.unit is not None:
-            device_class, unit, state_class = UNITS.get(
-                parameter.unit, (None, parameter.unit, None)
-            )
-            self._attr_device_class = device_class
-            self._attr_native_unit_of_measurement = unit
-            self._attr_state_class = state_class
+            (
+                self._attr_device_class,
+                self._attr_native_unit_of_measurement,
+                self._attr_state_class,
+            ) = unit_mapping(parameter)
         if self._numeric and parameter.decimals is not None:
             self._attr_suggested_display_precision = parameter.decimals
 

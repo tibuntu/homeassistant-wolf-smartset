@@ -65,6 +65,7 @@ async def test_poll_only_enabled_parameters(
 ) -> None:
     """Expert bundles are not requested while their entities are disabled."""
     await _setup(hass, mock_config_entry)
+    mock_client.get_values.reset_mock(side_effect=True)
     mock_client.get_values.return_value = [Value(22004200000, "1", 1)]
     freezer.tick(timedelta(seconds=120))
     async_fire_time_changed(hass)
@@ -83,6 +84,7 @@ async def test_offline_makes_entities_unavailable(
 ) -> None:
     """An offline gateway skips value requests."""
     await _setup(hass, mock_config_entry)
+    mock_client.get_values.reset_mock()
     mock_client.get_system_state.return_value = SystemState(False, 4)
     freezer.tick(timedelta(seconds=120))
     async_fire_time_changed(hass)
@@ -153,3 +155,34 @@ async def test_unload_closes_session(
     await _setup(hass, mock_config_entry)
     assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
     mock_client.close.assert_awaited_once()
+
+
+async def test_device_change_keeps_entity(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """A new device assignment moves the entity; unique_id and entity_id stay."""
+    mock_config_entry.add_to_hass(hass)
+    device_registry = dr.async_get(hass)
+    system = device_registry.async_get_or_create(
+        config_entry_id=mock_config_entry.entry_id, identifiers={(DOMAIN, "1234")}
+    )
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create(
+        "switch",
+        DOMAIN,
+        "1234_22004200000",
+        config_entry=mock_config_entry,
+        device_id=system.id,
+        suggested_object_id="zuhause_one_time_dhw_charge",
+    )
+
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    new = registry.async_get(old.entity_id)
+    assert new is not None
+    assert (new.id, new.unique_id, new.entity_id) == (old.id, old.unique_id, old.entity_id)
+    bm2 = dr.async_get_device_id_by_identifier(
+        hass, (DOMAIN, "1234_bedienmodul_bm_2_0"), config_entry_id=mock_config_entry.entry_id
+    )
+    assert new.device_id == bm2 != system.id

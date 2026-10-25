@@ -53,13 +53,6 @@
       }
     }
   },
-  "entity": {
-    "switch": {
-      "dhw_once": {
-        "name": "One-time DHW charge"
-      }
-    }
-  },
   "exceptions": {
     "writes_not_available": {
       "message": "Writing is not available yet. This version of the integration is read-only."

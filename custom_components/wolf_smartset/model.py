@@ -1,6 +1,6 @@
 """Parameter model built from the raw GetGuiDescriptionForGateway response.
 
-No Home Assistant imports. See docs/adr/ADR-Model-002 and ADR-Model-007.
+No Home Assistant imports. See docs/adr/ADR-Model-008 and ADR-Model-009.
 """
 
 from collections import Counter
@@ -27,7 +27,16 @@ WRITABLE_CONTROL_TYPES = frozenset({CT_COMBO_TEXT, CT_NUMERIC, CT_PROGRAM_SELECT
 LIST_CONTROL_TYPES = frozenset({CT_COMBO_TEXT, CT_PROGRAM_SELECTION})
 
 # One-time actions the generic mapping cannot recognise, keyed by ParameterId.
-KNOWN_SWITCHES = {22004200000: "dhw_once"}  # "1x Warmwasser"
+KNOWN_SWITCHES = frozenset({22004200000})  # "1x Warmwasser"
+
+# Period values that can go down (previous day/month/year): no total_increasing.
+SNAPSHOT_PATTERN = re.compile(r"\b(Vortag|Vormonat|Vorjahr|Vorvorjahr)\b")
+# Statistics that stay 0 without an external electricity meter (S0, WP110).
+METER_PATTERN = re.compile(r"^(Verbrauch|JAZ|TAZ|MAZ)\b")
+# Optional inputs that report no value when the sensor is not connected.
+OPTIONAL_INPUTS = frozenset({"Raumtemperatur"})
+# Device by ValueId prefix needs this many assigned parameters, all on one device.
+PREFIX_MIN_EVIDENCE = 3
 
 
 class Kind(StrEnum):
@@ -79,6 +88,26 @@ class Parameter:
     device: str | None = None
     label: str = ""
     occurrences: list[Occurrence] = field(default_factory=list)
+
+    @property
+    def schema_only(self) -> bool:
+        """Only shown as a port in the overview schema (ControlType 0 everywhere)."""
+        return all(o.control_type == CT_COMBO_IMAGE for o in self.occurrences)
+
+    @property
+    def snapshot(self) -> bool:
+        """Value of a closed period; it may be lower than the previous one."""
+        return SNAPSHOT_PATTERN.search(self.name) is not None
+
+    @property
+    def enabled_by_default(self) -> bool:
+        """Expert, schema-only, meter-dependent and optional-input values start disabled."""
+        return not (
+            self.expert
+            or self.schema_only
+            or METER_PATTERN.match(self.name)
+            or self.name in OPTIONAL_INPUTS
+        )
 
     @property
     def kind(self) -> Kind | None:
@@ -151,7 +180,7 @@ def _clean_group(group: str | None) -> str | None:
 
 
 def parse_description(raw: dict[str, Any]) -> Description:
-    """Build the parameter model; see ADR-Model-002 for the rules."""
+    """Build the parameter model; see ADR-Model-008 for the rules."""
     found: dict[int, list[tuple[Occurrence, dict[str, Any]]]] = {}
     svg_units: dict[int, str] = {}
     devices: dict[str, str] = {}
@@ -184,7 +213,7 @@ def parse_description(raw: dict[str, Any]) -> Description:
     for menu in raw.get("MenuItems") or []:
         walk(menu, None)
 
-    # ProtGrp -> device most often seen with it (ADR-Model-007 rule 2).
+    # ProtGrp -> device most often seen with it (ADR-Model-009 rule 2).
     prot_devices: dict[str, Counter[str]] = {}
     for entries in found.values():
         for occurrence, descriptor in entries:
@@ -249,19 +278,38 @@ def parse_description(raw: dict[str, Any]) -> Description:
             occurrences=[o for o, _ in entries],
         )
 
+    _assign_devices_by_prefix(parameters)
     _assign_labels([p for p in parameters.values() if p.kind])
     return Description(parameters, devices)
 
 
+def _assign_devices_by_prefix(parameters: dict[int, Parameter]) -> None:
+    """ValueId prefix -> device, only where every assigned parameter agrees.
+
+    The leading digits of a ValueId name the bus device type (for example 27 heat
+    generator, 36 mixer circuit of the BM-2, 4 mixer module). See ADR-Model-009.
+    """
+    by_prefix: dict[int, Counter[str]] = {}
+    for parameter in parameters.values():
+        if parameter.device:
+            by_prefix.setdefault(parameter.value_id // 10**9, Counter())[parameter.device] += 1
+    for parameter in parameters.values():
+        devices = by_prefix.get(parameter.value_id // 10**9)
+        if parameter.device is None and devices and len(devices) == 1:
+            device, count = devices.most_common(1)[0]
+            if count >= PREFIX_MIN_EVIDENCE:
+                parameter.device = device
+
+
 def _assign_labels(parameters: list[Parameter]) -> None:
-    """Prefix + name, made unique per device with the tab, the group, then the ID."""
+    """Prefix + name, made unique per system with the tab, the group, then the ID."""
     for parameter in parameters:
         prefix = f"{parameter.prefix} " if parameter.prefix else ""
         parameter.label = prefix + parameter.name
     for add in ("tab", "group", "id"):
-        counts = Counter((p.device, p.label) for p in parameters)
+        counts = Counter(p.label for p in parameters)
         for parameter in parameters:
-            if counts[(parameter.device, parameter.label)] < 2:
+            if counts[parameter.label] < 2:
                 continue
             if add == "tab" and parameter.tab:
                 parameter.label = f"{parameter.label} ({parameter.tab})"

@@ -49,7 +49,7 @@ class WolfEntity(CoordinatorEntity[WolfSystemCoordinator]):
         system_id = coordinator.system.id
         self._attr_unique_id = f"{system_id}_{parameter.parameter_id}"
         self._attr_name = parameter.label
-        self._attr_entity_registry_enabled_default = not parameter.expert
+        self._attr_entity_registry_enabled_default = parameter.enabled_by_default
         if parameter.writable and parameter.kind in (Kind.NUMBER, Kind.SELECT):
             self._attr_entity_category = EntityCategory.CONFIG
         if parameter.device:
