@@ -12,5 +12,8 @@ for f in tests/fixtures/real/*.json; do
      && grep -E '"(Id|SystemId|GatewayId|SystemShareId)": *[0-9]+' "$f" | grep -vqE ': *(1234|5678|9012)[,}]?$'; then
     echo "real system or gateway ID in $f"; status=1
   fi
+  if grep -qE '"[0-9]{2}:[0-9]{2}-[0-9]{2}:[0-9]{2};' "$f"; then
+    echo "time program schedule in $f"; status=1
+  fi
 done
 exit $status

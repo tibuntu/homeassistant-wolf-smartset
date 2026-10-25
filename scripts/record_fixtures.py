@@ -41,7 +41,8 @@ SECRET_PARAMETER = re.compile(
     r"seriennummer|serial|mac|ip adresse|gateway|dns|subnetz|anlagenname|herstell",
     re.IGNORECASE,
 )
-SECRET_CONTROL_TYPES = {20, 21, 22, 23}  # text, IP, URL, password inputs
+# text, IP, URL, password inputs; dates, times and day switch times (presence patterns)
+SECRET_CONTROL_TYPES = {9, 10, 14, 20, 21, 22, 23}
 
 
 def redact_ids(data: Any) -> Any:
