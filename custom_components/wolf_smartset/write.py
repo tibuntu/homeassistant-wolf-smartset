@@ -48,8 +48,31 @@ RESULT_RATE_LIMITED = "rate_limited"
 RESULT_ERROR = "error"
 RESULT_NOT_APPLIED = "not_applied"
 
-# Keys of portal responses that identify the installation or the session.
-_ID_KEYS = frozenset({"SystemId", "GatewayId", "SessionId", "Id", "SystemShareId"})
+# Keys of portal responses that identify the installation, the account or the session:
+# the identifier fields plus the personal fields scripts/record_fixtures.py redacts.
+_ID_KEYS = frozenset(
+    {
+        "SystemId",
+        "GatewayId",
+        "SessionId",
+        "Id",
+        "SystemShareId",
+        "GatewayUsername",
+        "SerialNumber",
+        "Name",
+        "Description",
+        "Comment",
+        "ContactInformation",
+        "Email",
+        "UserName",
+        "Firstname",
+        "Surname",
+        "Street",
+        "City",
+        "ZipCode",
+        "Phone",
+    }
+)
 REDACTED = "**REDACTED**"
 
 

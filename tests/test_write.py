@@ -320,6 +320,13 @@ async def test_undo_restores_previous_value(
             [{"ValueId": DHW_SETPOINT, "State": 1, "SessionId": 42}],
             [{"ValueId": DHW_SETPOINT, "State": 1, "SessionId": "**REDACTED**"}],
         ),
+        (
+            {"GatewayUsername": "WL123456", "Values": [{"ValueId": DHW_SETPOINT, "Name": "x"}]},
+            {
+                "GatewayUsername": "**REDACTED**",
+                "Values": [{"ValueId": DHW_SETPOINT, "Name": "**REDACTED**"}],
+            },
+        ),
     ],
 )
 async def test_write_response_is_kept_redacted(
