@@ -503,6 +503,7 @@ def test_same_value_edge_cases(description: dict[str, Any]) -> None:
     assert same_value(setpoint, None, "50") is False
     assert same_value(setpoint, "--", "50") is False
     assert same_value(setpoint, "50.0", "50") is True
+    assert same_value(setpoint, "50.5", "50,5") is True
     assert same_value(program, " 1 ", "1") is True
     assert same_value(program, None, "1") is False
 

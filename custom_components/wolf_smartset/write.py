@@ -98,7 +98,9 @@ def same_value(parameter: Parameter, current: str | None, target: str) -> bool:
         return False
     if parameter.kind is Kind.NUMBER:
         try:
-            return math.isclose(float(current.replace(",", ".")), float(target), abs_tol=1e-6)
+            return math.isclose(
+                float(current.replace(",", ".")), float(target.replace(",", ".")), abs_tol=1e-6
+            )
         except ValueError:
             return False
     return current.strip() == target
