@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
 import pytest
@@ -278,3 +278,23 @@ async def test_changed_description_reloads_the_entry(
         async_fire_time_changed(hass)
         await hass.async_block_till_done()
     reload.assert_called_once_with(mock_config_entry.entry_id)
+
+
+@pytest.mark.parametrize(
+    ("other", "expected"), [("User@Example.com", True), ("other@example.com", False)]
+)
+async def test_wolflink_issue_only_for_the_same_account(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    other: str,
+    expected: bool,
+) -> None:
+    """Two integrations on one account double the logins; a different account does not."""
+    wolflink = MockConfigEntry(domain="wolflink", data={CONF_USERNAME: other, CONF_PASSWORD: "x"})
+    wolflink.add_to_hass(hass)
+    wolflink.mock_state(hass, ConfigEntryState.LOADED)
+    await _setup(hass, mock_config_entry)
+    assert bool(ir.async_get(hass).async_get_issue(DOMAIN, "wolflink_active")) is expected
+    # The core integration is not installed; teardown must not try to unload it.
+    wolflink.mock_state(hass, ConfigEntryState.NOT_LOADED)

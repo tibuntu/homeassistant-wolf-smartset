@@ -48,7 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> bool
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id, **system_device_info(coordinator)
         )
-    _check_wolflink(hass)
+    _check_wolflink(hass, entry.data[CONF_USERNAME])
 
     writer = WriteManager(hass, entry)
     await writer.async_load()
@@ -75,11 +75,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> boo
     return unloaded
 
 
-def _check_wolflink(hass: HomeAssistant) -> None:
-    """Warn when core wolflink also logs in from this IP (ADR-Integration-000)."""
-    if any(
-        e.state is ConfigEntryState.LOADED for e in hass.config_entries.async_entries("wolflink")
-    ):
+def _check_wolflink(hass: HomeAssistant, username: str) -> None:
+    """Warn when core wolflink logs in with the same account (ADR-Integration-000)."""
+    same_account = any(
+        e.state is ConfigEntryState.LOADED
+        and str(e.data.get(CONF_USERNAME, "")).lower() == username.lower()
+        for e in hass.config_entries.async_entries("wolflink")
+    )
+    if same_account:
         ir.async_create_issue(
             hass,
             DOMAIN,
