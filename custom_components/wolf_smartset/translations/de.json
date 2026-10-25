@@ -1,4 +1,46 @@
 {
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wolf-SmartSet-Konto",
+        "description": "Nutzt dieselbe inoffizielle Cloud-Schnittstelle wie das SmartSet-Portal. Deaktiviere die Core-Integration Wolf SmartSet Service für dieses Konto, um doppelte Logins zu vermeiden.",
+        "data": {
+          "username": "Benutzername",
+          "password": "Passwort"
+        },
+        "data_description": {
+          "username": "Der Benutzername deines Wolf-SmartSet-Kontos.",
+          "password": "Das Passwort deines Wolf-SmartSet-Kontos (höchstens 30 Zeichen)."
+        }
+      },
+      "systems": {
+        "title": "Systeme auswählen",
+        "data": {
+          "systems": "Systeme"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Wolf SmartSet erneut anmelden",
+        "description": "Wolf SmartSet hat das Passwort von {username} abgelehnt.",
+        "data": {
+          "password": "Passwort"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Ungültiger Benutzername oder ungültiges Passwort.",
+      "cannot_connect": "Verbindung zu Wolf SmartSet fehlgeschlagen.",
+      "portal_unavailable": "Das Wolf-SmartSet-Portal ist nicht erreichbar oder blockiert diese IP-Adresse vorübergehend. Versuche es in einer Stunde erneut.",
+      "password_too_long": "Wolf SmartSet akzeptiert höchstens 30 Zeichen.",
+      "no_system_selected": "Wähle mindestens ein System aus.",
+      "unknown": "Unerwarteter Fehler."
+    },
+    "abort": {
+      "already_configured": "Dieses Konto ist bereits eingerichtet.",
+      "no_systems": "Das Konto hat keine Wolf-Systeme.",
+      "reauth_successful": "Die erneute Anmeldung war erfolgreich."
+    }
+  },
   "options": {
     "step": {
       "init": {
@@ -12,13 +54,6 @@
           "dry_run": "Solange aktiv, werden Änderungen nur protokolliert (INFO) mit Parameter, altem und neuem Wert; an die Heizung wird nichts gesendet.",
           "max_writes_per_hour": "Schützt das EEPROM der Regelung vor Automationsschleifen. Übersprungene Schreibvorgänge mit unverändertem Wert zählen nicht."
         }
-      }
-    }
-  },
-  "entity": {
-    "button": {
-      "undo": {
-        "name": "Letzte Änderung rückgängig"
       }
     }
   },
@@ -46,6 +81,23 @@
     },
     "nothing_to_undo": {
       "message": "Es gibt keine übernommene Änderung zum Rückgängigmachen."
+    }
+  },
+  "issues": {
+    "throttled": {
+      "title": "Wolf SmartSet drosselt {system}",
+      "description": "Wolf SmartSet hat mehrere Abfragen mit Drosselung oder leeren Antworten beantwortet. Die Integration fragt seltener ab, bis das Portal wieder antwortet. Prüfe, ob ein anderer Client sich mit diesem Konto aus deinem Netz anmeldet."
+    },
+    "wolflink_active": {
+      "title": "Core-Integration Wolf SmartSet Service ist aktiv",
+      "description": "Die Core-Integration Wolf SmartSet Service ist ebenfalls geladen. Beide melden sich von derselben IP-Adresse an, was Wolf dazu bringen kann, die Adresse bis zu einer Stunde zu sperren, auch für die SmartSet-App. Deaktiviere die Core-Integration, wenn sie dasselbe Konto nutzt."
+    }
+  },
+  "entity": {
+    "button": {
+      "undo": {
+        "name": "Letzte Änderung rückgängig"
+      }
     }
   }
 }
