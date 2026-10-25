@@ -2,6 +2,8 @@
 
 from collections.abc import Callable
 import json
+import time
+from typing import Any
 from urllib.parse import parse_qs
 
 import httpx
@@ -10,14 +12,20 @@ import pytest
 from custom_components.wolf_smartset.api import (
     API_URL,
     AUTH_URL,
+    LOGIN_BACKOFF_MAX_SECONDS,
+    LOGIN_BACKOFF_SECONDS,
     REDIRECT_URI,
     ApiError,
     AuthError,
+    CannotConnect,
+    LoginFailed,
+    Maintenance,
     ParameterReadError,
     PortalUnavailable,
     System,
     TooManyRequests,
     WolfClient,
+    _login_backoff,
     extract_verification_token,
 )
 
@@ -38,6 +46,8 @@ class FakePortal:
         self.api: dict[str, Callable[[httpx.Request], httpx.Response]] = {}
         self.login_page = LOGIN_PAGE
         self.state = ""
+        self.token_status = 200
+        self.token_body: dict[str, Any] | None = None
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         url = str(request.url)
@@ -60,9 +70,12 @@ class FakePortal:
         if url.startswith(REDIRECT_URI):
             return httpx.Response(200, text="ok")
         if url == f"{AUTH_URL}/connect/token":
+            if self.token_status != 200:
+                return httpx.Response(self.token_status, text="<html>error</html>")
             form = parse_qs(request.content.decode())
             assert form["code_verifier"] and form["grant_type"] == ["authorization_code"]
-            return httpx.Response(200, json={"access_token": f"t{self.logins}", "expires_in": 3600})
+            body = self.token_body or {"access_token": f"t{self.logins}", "expires_in": 3600}
+            return httpx.Response(200, json=body)
         path = url.removeprefix(f"{API_URL}/").split("?")[0]
         self.calls.append(path)
         if path == "CreateSession2":
@@ -134,6 +147,7 @@ async def test_unauthorized_relogs_once(client: WolfClient, portal: FakePortal) 
             200,
             ParameterReadError,
         ),
+        ({"ErrorCode": 6, "Message": "x"}, 200, Maintenance),
         ({"ErrorCode": 7, "Message": "x"}, 400, ApiError),
     ],
 )
@@ -206,3 +220,82 @@ async def test_write_value_is_never_retried(
         await client.write_value(SYSTEM, 1000, 22004200000, "1", "1x Warmwasser")
     assert portal.calls.count("WriteParameterValues") == 1
     assert portal.logins == 1
+
+
+async def test_failed_login_blocks_further_attempts(client: WolfClient, portal: FakePortal) -> None:
+    """One credential POST, then LoginFailed without any request until the block ends."""
+    portal.token_status = 502
+    with pytest.raises(CannotConnect):
+        await client.get_systems()
+    for _ in range(4):
+        with pytest.raises(LoginFailed):
+            await client.get_systems()
+    assert portal.logins == 1
+    assert portal.calls == []
+    assert 0 < client.login_blocked_seconds <= LOGIN_BACKOFF_SECONDS
+    assert _login_backoff["user"][1] == 1
+
+
+async def test_backoff_doubles_and_resets(client: WolfClient, portal: FakePortal) -> None:
+    """Each consecutive failure doubles the block; a successful login clears it."""
+    portal.token_status = 502
+    with pytest.raises(CannotConnect):
+        await client.get_systems()
+    _login_backoff["user"] = (time.monotonic() - 1, 1)  # the first block has ended
+    with pytest.raises(CannotConnect):
+        await client.get_systems()
+    assert portal.logins == 2
+    assert _login_backoff["user"][1] == 2
+    assert client.login_blocked_seconds > LOGIN_BACKOFF_SECONDS
+
+    _login_backoff["user"] = (time.monotonic() - 1, 2)
+    portal.token_status = 200
+    portal.api["GetSystemList"] = lambda r: httpx.Response(200, json=[])
+    assert await client.get_systems() == []
+    assert "user" not in _login_backoff
+    assert client.login_blocked_seconds == 0
+
+
+async def test_backoff_is_capped(client: WolfClient, portal: FakePortal) -> None:
+    """After many failures the block stays at the cap."""
+    portal.token_status = 502
+    _login_backoff["user"] = (0.0, 10)
+    with pytest.raises(CannotConnect):
+        await client.get_systems()
+    assert (
+        LOGIN_BACKOFF_MAX_SECONDS - 2 <= client.login_blocked_seconds <= LOGIN_BACKOFF_MAX_SECONDS
+    )
+
+
+async def test_backoff_key_ignores_case(portal: FakePortal) -> None:
+    """Clients for 'User' and 'user' share one block."""
+    portal.token_status = 502
+    async with httpx.AsyncClient(transport=httpx.MockTransport(portal)) as http:
+        with pytest.raises(CannotConnect):
+            await WolfClient(http, "User", portal.password).get_systems()
+        with pytest.raises(LoginFailed):
+            await WolfClient(http, "user", portal.password).get_systems()
+    assert portal.logins == 1
+
+
+async def test_wrong_password_sets_no_block(portal: FakePortal) -> None:
+    """Invalid credentials go to reauth; retries are the user's."""
+    async with httpx.AsyncClient(transport=httpx.MockTransport(portal)) as http:
+        client = WolfClient(http, "user", "wrong")
+        for _ in range(2):
+            with pytest.raises(AuthError):
+                await client.get_systems()
+    assert "user" not in _login_backoff
+
+
+async def test_token_response_without_token(client: WolfClient, portal: FakePortal) -> None:
+    """A JSON error from the token endpoint is an ApiError and counts as a failed login."""
+    portal.token_body = {"error": "invalid_grant"}
+    with pytest.raises(ApiError):
+        await client.get_systems()
+    assert _login_backoff["user"][1] == 1
+
+
+def test_maintenance_is_portal_unavailable() -> None:
+    """The coordinator's backoff tuple catches Maintenance through its base class."""
+    assert issubclass(Maintenance, PortalUnavailable)

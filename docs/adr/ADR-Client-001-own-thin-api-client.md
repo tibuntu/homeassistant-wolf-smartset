@@ -84,3 +84,4 @@ Keeping the client free of HA imports lets us test it against recorded responses
 - [ADR-Integration-000: Standalone integration](ADR-Integration-000-standalone-integration.md)
 - [ADR-Model-002: Parameter model and entity mapping](ADR-Model-002-parameter-model-and-entity-mapping.md)
 - [ADR-Polling-003: Polling strategy](ADR-Polling-003-polling-strategy.md)
+- [ADR-Client-014: Login backoff across client instances](ADR-Client-014-login-backoff.md)

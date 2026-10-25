@@ -10,7 +10,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
-from custom_components.wolf_smartset.api import AuthError, SystemState, TooManyRequests, Value
+from custom_components.wolf_smartset.api import (
+    AuthError,
+    LoginFailed,
+    SystemState,
+    TooManyRequests,
+    Value,
+)
 from custom_components.wolf_smartset.const import DOMAIN
 
 
@@ -170,3 +176,29 @@ async def test_device_change_keeps_entity(
         hass, (DOMAIN, "1234_heizgerat"), config_entry_id=mock_config_entry.entry_id
     )
     assert new.device_id == heat_generator != system.id
+
+
+async def test_blocked_login_retries_setup(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """A blocked login is temporary: setup retry, no reauth flow."""
+    mock_client.get_description.side_effect = LoginFailed("blocked")
+    await _setup(hass, mock_config_entry)
+    assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
+    assert not hass.config_entries.flow.async_progress()
+
+
+async def test_blocked_login_backs_off(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """LoginFailed during a poll doubles the interval like throttling."""
+    await _setup(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinators[1234]
+    mock_client.get_system_state.side_effect = LoginFailed("blocked")
+    freezer.tick(coordinator.update_interval)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert coordinator.update_interval == timedelta(seconds=240)

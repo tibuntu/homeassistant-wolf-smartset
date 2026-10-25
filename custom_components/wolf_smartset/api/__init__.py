@@ -34,6 +34,15 @@ MAX_PASSWORD_LENGTH = 30
 SESSION_REFRESH_SECONDS = 60
 TOKEN_EXPIRY_MARGIN_SECONDS = 60
 
+# A failed login blocks the next attempt for this long, doubling per failure (ADR-Client-014).
+LOGIN_BACKOFF_SECONDS = 300
+LOGIN_BACKOFF_MAX_SECONDS = 3600
+
+# Lower-cased username -> (monotonic time until which logins are blocked, consecutive failures).
+# ponytail: process-wide dict, one HA instance per process; it must outlive client
+# instances so HA's setup retries and the config flow cannot log in again.
+_login_backoff: dict[str, tuple[float, int]] = {}
+
 # Values of Declarations.EnParamState in the portal JavaScript.
 STATE_OK = 1
 STATE_TIMEOUT = 4
@@ -56,6 +65,14 @@ class AuthError(WolfError):
 
 class PortalUnavailable(WolfError):
     """Login page without form: maintenance or a temporary IP block."""
+
+
+class Maintenance(PortalUnavailable):
+    """ErrorCode 6, the portal is in maintenance."""
+
+
+class LoginFailed(WolfError):
+    """Login blocked after earlier failures; no request was made."""
 
 
 class TooManyRequests(WolfError):
@@ -156,6 +173,8 @@ def _raise_for_body(data: Any) -> None:
             raise AuthError(message)
         case 4:
             raise SystemOffline(message)
+        case 6:
+            raise Maintenance(message)
         case 10:
             raise TooManyRequests(message)
     raise ApiError(code, message)
@@ -270,11 +289,35 @@ class WolfClient:
             raise ApiError(response.status_code, path)
         return data
 
+    async def _login_with_backoff(self, now: float) -> None:
+        """Log in unless an earlier failure still blocks this account."""
+        key = self._username.lower()
+        blocked_until, failures = _login_backoff.get(key, (0.0, 0))
+        if now < blocked_until:
+            raise LoginFailed(
+                f"login blocked for {int(blocked_until - now)} s after {failures} failed attempts"
+            )
+        try:
+            await self._login()
+        except AuthError:
+            raise
+        except WolfError:
+            delay = min(LOGIN_BACKOFF_SECONDS * 2**failures, LOGIN_BACKOFF_MAX_SECONDS)
+            _login_backoff[key] = (now + delay, failures + 1)
+            raise
+        _login_backoff.pop(key, None)
+
+    @property
+    def login_blocked_seconds(self) -> int:
+        """Seconds until the next login attempt is allowed, 0 when not blocked."""
+        blocked_until, _ = _login_backoff.get(self._username.lower(), (0.0, 0))
+        return max(0, int(blocked_until - time.monotonic()))
+
     async def _ensure_session(self) -> None:
         async with self._lock:
             now = time.monotonic()
             if self._token is None or now >= self._token_expires:
-                await self._login()
+                await self._login_with_backoff(now)
             if self._session_id is None:
                 data = await self._call(
                     "POST",

@@ -19,6 +19,7 @@ from .api import (
     STATE_OK,
     STATE_TIMEOUT,
     AuthError,
+    LoginFailed,
     ParameterReadError,
     PortalUnavailable,
     System,
@@ -119,7 +120,7 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
             data = await self._poll()
         except AuthError as err:
             raise ConfigEntryAuthFailed(str(err)) from err
-        except (TooManyRequests, PortalUnavailable) as err:
+        except (TooManyRequests, PortalUnavailable, LoginFailed) as err:
             self._back_off()
             raise UpdateFailed(f"Wolf SmartSet throttles requests: {err}") from err
         except WolfError as err:

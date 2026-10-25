@@ -19,6 +19,7 @@ from custom_components.wolf_smartset.api import (
     AUTH_URL,
     REDIRECT_URI,
     CannotConnect,
+    LoginFailed,
     WolfClient,
 )
 from custom_components.wolf_smartset.const import CONF_DRY_RUN, DOMAIN
@@ -64,11 +65,6 @@ async def test_write_response_reporting_an_error_is_not_ok(
 LOGIN_PAGE = '<form><input type="hidden" name="__RequestVerificationToken" value="tok"/></form>'
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Finding 3: a failed token exchange leaves the token empty, and every later call "
-    "posts the credentials again without any backoff",
-)
 async def test_failed_token_exchange_does_not_relogin_on_every_call() -> None:
     """Five calls against a broken token endpoint must not post the credentials five times."""
     logins = 0
@@ -96,6 +92,6 @@ async def test_failed_token_exchange_does_not_relogin_on_every_call() -> None:
     async with httpx.AsyncClient(transport=httpx.MockTransport(portal)) as http:
         client = WolfClient(http, "user", "pw")
         for _ in range(5):
-            with pytest.raises(CannotConnect):
+            with pytest.raises((CannotConnect, LoginFailed)):
                 await client.get_systems()
-    assert logins < 5
+    assert logins == 1

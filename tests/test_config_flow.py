@@ -9,7 +9,7 @@ from homeassistant.data_entry_flow import FlowResultType
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.wolf_smartset.api import AuthError, PortalUnavailable, System
+from custom_components.wolf_smartset.api import AuthError, LoginFailed, PortalUnavailable, System
 from custom_components.wolf_smartset.const import (
     CONF_DRY_RUN,
     CONF_MAX_WRITES_PER_HOUR,
@@ -49,7 +49,11 @@ async def test_system_selection(hass: HomeAssistant, mock_client: MagicMock) -> 
 
 @pytest.mark.parametrize(
     ("error", "key"),
-    [(AuthError("x"), "invalid_auth"), (PortalUnavailable("x"), "portal_unavailable")],
+    [
+        (AuthError("x"), "invalid_auth"),
+        (PortalUnavailable("x"), "portal_unavailable"),
+        (LoginFailed("x"), "portal_unavailable"),
+    ],
 )
 async def test_errors_recover(
     hass: HomeAssistant, mock_client: MagicMock, error: Exception, key: str

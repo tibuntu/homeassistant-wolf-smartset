@@ -12,6 +12,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.wolf_smartset import api
 from custom_components.wolf_smartset.api import System, SystemState, Value
 from custom_components.wolf_smartset.const import CONF_SYSTEMS, DOMAIN
 from custom_components.wolf_smartset.model import parse_description
@@ -28,6 +29,14 @@ SEED = {p.value_id: p.value or "0" for p in parse_description(DESCRIPTION).param
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
     """Load custom_components/ in every test."""
+
+
+@pytest.fixture(autouse=True)
+def clear_login_backoff() -> Generator[None]:
+    """The login backoff is process-wide; every test starts without one."""
+    api._login_backoff.clear()
+    yield
+    api._login_backoff.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -83,4 +92,5 @@ def mock_client(description: dict[str, Any]) -> Generator[MagicMock]:
         client.write_value = AsyncMock(return_value={})
         client.login_count = 1
         client.last_login = None
+        client.login_blocked_seconds = 0
         yield client
