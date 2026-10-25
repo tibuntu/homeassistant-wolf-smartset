@@ -1,0 +1,12 @@
+[
+  {
+    "Id": 1234,
+    "GatewayId": 5678,
+    "IsForeignSystem": false,
+    "AccessLevel": 4,
+    "GatewayUsername": "**REDACTED**",
+    "Name": "**REDACTED**",
+    "SystemShares": [],
+    "GatewaySoftwareVersion": "440"
+  }
+]

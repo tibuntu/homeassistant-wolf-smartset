@@ -35,6 +35,7 @@ FAKE_IDS = {"Id": 1234, "SystemId": 1234, "GatewayId": 5678, "SystemShareId": 90
 SECRET_KEYS = {
     "Name", "Description", "Comment", "ContactInformation", "Email", "UserName",
     "Firstname", "Surname", "Street", "City", "ZipCode", "Phone", "SerialNumber",
+    "GatewayUsername",
 }  # fmt: skip
 SECRET_PARAMETER = re.compile(
     r"seriennummer|serial|mac|ip adresse|gateway|dns|subnetz|anlagenname|herstell",

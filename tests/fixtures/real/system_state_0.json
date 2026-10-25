@@ -1,0 +1,18 @@
+[
+  {
+    "SystemId": 1234,
+    "GatewayState": {
+      "GatewayId": 5678,
+      "IsOnline": true,
+      "GatewayOfflineCause": 0,
+      "IsLocked": false,
+      "IsDeleted": false,
+      "IsBusy": false,
+      "ImageName": "cha.jpg"
+    },
+    "AccessLevel": 4,
+    "IsSystemShareDeleted": false,
+    "IsSystemShareRejected": false,
+    "IsSystemDeleted": false
+  }
+]

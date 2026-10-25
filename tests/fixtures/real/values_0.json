@@ -1,0 +1,289 @@
+{
+  "LastAccess": "2026-10-25T16:01:42.6809403Z",
+  "Values": [
+    {
+      "ValueId": 4000100001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 4000200001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 4002700001,
+      "Value": "29.1",
+      "State": 1
+    },
+    {
+      "ValueId": 4007000001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 22004200000,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27000400001,
+      "Value": "29",
+      "State": 1
+    },
+    {
+      "ValueId": 27000500001,
+      "Value": "11.3",
+      "State": 1
+    },
+    {
+      "ValueId": 27000600001,
+      "Value": "51",
+      "State": 1
+    },
+    {
+      "ValueId": 27000700001,
+      "Value": "48.4",
+      "State": 1
+    },
+    {
+      "ValueId": 27000800001,
+      "Value": "48",
+      "State": 1
+    },
+    {
+      "ValueId": 27000900001,
+      "Value": "33.3",
+      "State": 1
+    },
+    {
+      "ValueId": 27001000001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27001100001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27001200001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27001300001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27001400001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27001600001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27002700001,
+      "Value": "7509",
+      "State": 1
+    },
+    {
+      "ValueId": 27002800001,
+      "Value": "0.6",
+      "State": 1
+    },
+    {
+      "ValueId": 27002900001,
+      "Value": "35.2",
+      "State": 1
+    },
+    {
+      "ValueId": 27003000001,
+      "Value": "1.68",
+      "State": 1
+    },
+    {
+      "ValueId": 27003800001,
+      "Value": "3",
+      "State": 1
+    },
+    {
+      "ValueId": 27004800001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27004900001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27005000001,
+      "Value": "10",
+      "State": 1
+    },
+    {
+      "ValueId": 27005100001,
+      "Value": "3",
+      "State": 1
+    },
+    {
+      "ValueId": 27005800001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27005900001,
+      "Value": "28544",
+      "State": 1
+    },
+    {
+      "ValueId": 27006000001,
+      "Value": "11227",
+      "State": 1
+    },
+    {
+      "ValueId": 27006100001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27016200001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27016300001,
+      "Value": "750",
+      "State": 1
+    },
+    {
+      "ValueId": 27016400001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27016500001,
+      "Value": "11883",
+      "State": 1
+    },
+    {
+      "ValueId": 27016600001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27016700001,
+      "Value": "19258",
+      "State": 1
+    },
+    {
+      "ValueId": 27016800001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27016900001,
+      "Value": "8630",
+      "State": 1
+    },
+    {
+      "ValueId": 27017100001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27017200001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27017300001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27017400001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27017500001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 27017600001,
+      "Value": "51",
+      "State": 1
+    },
+    {
+      "ValueId": 27017700001,
+      "Value": "0",
+      "State": 1
+    },
+    {
+      "ValueId": 35000100000,
+      "Value": "5",
+      "State": 1
+    },
+    {
+      "ValueId": 35000900000,
+      "Value": "48",
+      "State": 1
+    },
+    {
+      "ValueId": 35001200000,
+      "Value": "1",
+      "State": 1
+    },
+    {
+      "ValueId": 36000000001,
+      "State": 1
+    },
+    {
+      "ValueId": 36000100001,
+      "Value": "11",
+      "State": 1
+    },
+    {
+      "ValueId": 36000400001,
+      "Value": "7",
+      "State": 1
+    },
+    {
+      "ValueId": 36000500001,
+      "Value": "10",
+      "State": 1
+    },
+    {
+      "ValueId": 36001100001,
+      "Value": "29.1",
+      "State": 1
+    },
+    {
+      "ValueId": 36002900001,
+      "Value": "-1",
+      "State": 1
+    },
+    {
+      "ValueId": 36005100001,
+      "Value": "1",
+      "State": 1
+    },
+    {
+      "ValueId": 36006800001,
+      "Value": "20",
+      "State": 1
+    },
+    {
+      "ValueId": 36008400001,
+      "Value": "20",
+      "State": 1
+    }
+  ]
+}

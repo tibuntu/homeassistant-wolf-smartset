@@ -322,7 +322,6 @@ class WolfClient:
             entry["SystemShareId"] = system.share_id
         data = await self._request("POST", "GetSystemStateList", json={"SystemList": [entry]})
         item = data[0]
-        # ponytail: AccessLevel location unverified; None until a recording shows it
         return SystemState(bool(item["GatewayState"]["IsOnline"]), item.get("AccessLevel"))
 
     async def get_description(self, system: System) -> dict[str, Any]:
