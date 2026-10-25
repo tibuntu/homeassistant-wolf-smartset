@@ -4,6 +4,7 @@
 
 ### Added
 
+- **Brand icon** in a light and a dark variant, shown in the integrations list.
 - **Writing** for `number`, `select` and the "1x Warmwasser" switch, through one pipeline with dry run (on by default), no-op suppression, validation, access-level check, rate limit (20 per hour, configurable), lock, optimistic state and a persistent history ([ADR-Writes-013](docs/adr/ADR-Writes-013-write-pipeline-with-explicit-confirmation.md)). The written value is kept for 30 s, even if a poll that ran during or right after the write still returns the old value. The first poll after that confirms or corrects it. Every applied write records `confirmed` (`null` while pending, `true` or `false`) and `read_back`.
 - **Undo last change** button.
 - **Write history in the diagnostics** (last 50 attempts with result).
