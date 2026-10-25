@@ -24,6 +24,7 @@ from custom_components.wolf_smartset.api import (
     PortalUnavailable,
     System,
     TooManyRequests,
+    Value,
     WolfClient,
     _login_backoff,
     extract_verification_token,
@@ -299,3 +300,106 @@ async def test_token_response_without_token(client: WolfClient, portal: FakePort
 def test_maintenance_is_portal_unavailable() -> None:
     """The coordinator's backoff tuple catches Maintenance through its base class."""
     assert issubclass(Maintenance, PortalUnavailable)
+
+
+@pytest.mark.parametrize("step", ["connect/authorize", "Account/Login", "connect/token"])
+async def test_429_during_login(portal: FakePortal, step: str) -> None:
+    """HTTP 429 on any login step is throttling."""
+
+    def throttled(request: httpx.Request) -> httpx.Response:
+        if step in str(request.url):
+            return httpx.Response(429)
+        return portal(request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(throttled)) as http:
+        with pytest.raises(TooManyRequests):
+            await WolfClient(http, "user", portal.password).get_systems()
+
+
+async def test_session_is_refreshed_after_60_seconds(
+    client: WolfClient, portal: FakePortal
+) -> None:
+    """UpdateSession runs before a request once the session is older than 60 s."""
+    portal.api["GetSystemList"] = lambda r: httpx.Response(200, json=[])
+    portal.api["UpdateSession"] = lambda r: httpx.Response(200, json={"Maintenance": 0})
+    await client.get_systems()
+    client._session_refreshed -= 61
+    await client.get_systems()
+    assert portal.calls == ["CreateSession2", "GetSystemList", "UpdateSession", "GetSystemList"]
+
+
+async def test_second_unauthorized_is_an_error(client: WolfClient, portal: FakePortal) -> None:
+    """Only one relogin per request."""
+    portal.api["GetSystemList"] = lambda r: httpx.Response(401)
+    with pytest.raises(ApiError):
+        await client.get_systems()
+    assert portal.logins == 2
+
+
+async def test_invalid_session_creates_a_new_session(
+    client: WolfClient, portal: FakePortal
+) -> None:
+    """ErrorCode 1 once: new session and retry; twice: error."""
+    answers = iter([{"ErrorCode": 1, "Message": "x"}, []])
+    portal.api["GetSystemList"] = lambda r: httpx.Response(200, json=next(answers))
+    assert await client.get_systems() == []
+    assert portal.calls.count("CreateSession2") == 2
+
+    portal.api["GetSystemList"] = lambda r: httpx.Response(
+        200, json={"ErrorCode": 1, "Message": "x"}
+    )
+    with pytest.raises(ApiError):
+        await client.get_systems()
+
+
+async def test_write_with_lost_session_is_not_retried(
+    client: WolfClient, portal: FakePortal
+) -> None:
+    """A write answered with InvalidSession raises; the next call opens a new session."""
+    portal.api["WriteParameterValues"] = lambda r: httpx.Response(
+        200, json={"ErrorCode": 1, "Message": "x"}
+    )
+    portal.api["GetSystemList"] = lambda r: httpx.Response(200, json=[])
+    with pytest.raises(ApiError):
+        await client.write_value(SYSTEM, 1000, 22004200000, "1", "1x Warmwasser")
+    assert portal.calls.count("WriteParameterValues") == 1
+    await client.get_systems()
+    assert portal.calls.count("CreateSession2") == 2
+
+
+async def test_write_value_non_json_body(client: WolfClient, portal: FakePortal) -> None:
+    """HTTP 200 with an HTML body (login page) is an error, never a silent success."""
+    portal.api["WriteParameterValues"] = lambda r: httpx.Response(200, text="<html>login</html>")
+    with pytest.raises(ApiError):
+        await client.write_value(SYSTEM, 1000, 22004200000, "1", "1x Warmwasser")
+
+
+async def test_close_releases_the_session(client: WolfClient, portal: FakePortal) -> None:
+    """CloseSystem is called once per session; errors are swallowed; no session, no call."""
+    await client.close()
+    assert "CloseSystem" not in portal.calls
+    portal.api["GetSystemList"] = lambda r: httpx.Response(200, json=[])
+    portal.api["CloseSystem"] = lambda r: httpx.Response(500)
+    await client.get_systems()
+    await client.close()
+    await client.close()
+    assert portal.calls.count("CloseSystem") == 1
+
+
+async def test_shared_system_state_request(client: WolfClient, portal: FakePortal) -> None:
+    """Shared systems send their SystemShareId; values without State or Value are kept."""
+
+    def state(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        assert payload["SystemList"] == [{"SystemId": 1, "GatewayId": 2, "SystemShareId": 7}]
+        assert payload["SessionId"] == 42
+        return httpx.Response(200, json=[{"GatewayState": {"IsOnline": False}}])
+
+    portal.api["GetSystemStateList"] = state
+    result = await client.get_system_state(System(1, 2, "Home", 7))
+    assert (result.online, result.access_level) == (False, None)
+
+    portal.api["GetParameterValues"] = lambda r: httpx.Response(
+        200, json={"Values": [{"ValueId": 7, "State": 0}]}
+    )
+    assert await client.get_values(SYSTEM, 1000, [7]) == [Value(7, None, 0)]

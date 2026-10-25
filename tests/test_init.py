@@ -1,23 +1,27 @@
 """Setup, entities and polling (ADR-Polling-003)."""
 
+import copy
 from datetime import timedelta
-from unittest.mock import MagicMock
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
+import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.wolf_smartset.api import (
     AuthError,
     LoginFailed,
+    ParameterReadError,
     SystemState,
     TooManyRequests,
     Value,
 )
-from custom_components.wolf_smartset.const import DOMAIN
+from custom_components.wolf_smartset.const import DESCRIPTION_MAX_AGE, DOMAIN
 
 
 async def _setup(hass: HomeAssistant, entry: MockConfigEntry) -> None:
@@ -202,3 +206,75 @@ async def test_blocked_login_backs_off(
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
     assert coordinator.update_interval == timedelta(seconds=240)
+
+
+async def test_unreadable_value_is_isolated(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A bundle read error is retried per value; the bad value is skipped from then on."""
+    await _setup(hass, mock_config_entry)
+    bad = 35000900000  # DHW setpoint
+
+    def read(system: Any, bundle: int, ids: list[int], first: bool = False) -> list[Value]:
+        if bad in ids:
+            raise ParameterReadError("internal msg: ReadParameterValues error")
+        return [Value(i, "1", 1) for i in ids]
+
+    mock_client.get_values.side_effect = read
+    freezer.tick(timedelta(seconds=120))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+
+    coordinator = mock_config_entry.runtime_data.coordinators[1234]
+    assert coordinator.unreadable == {bad}
+    assert f"Value {bad} of Home cannot be read" in caplog.text
+    assert hass.states.get(_entity_id(hass, "switch", 22004200000)).state == "on"
+
+    mock_client.get_values.reset_mock()
+    freezer.tick(timedelta(seconds=120))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert mock_client.get_values.call_args_list
+    assert all(bad not in call.args[2] for call in mock_client.get_values.call_args_list)
+
+
+async def test_description_is_reloaded_daily(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """After a day the description is fetched again; an unchanged one reloads nothing."""
+    await _setup(hass, mock_config_entry)
+    mock_client.get_description.reset_mock()
+    with patch.object(hass.config_entries, "async_schedule_reload") as reload:
+        freezer.tick(DESCRIPTION_MAX_AGE + timedelta(seconds=130))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    assert mock_client.get_description.await_count == 1
+    reload.assert_not_called()
+
+
+async def test_changed_description_reloads_the_entry(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    description: dict[str, Any],
+) -> None:
+    """A description with other parameters schedules a config entry reload."""
+    await _setup(hass, mock_config_entry)
+    changed = copy.deepcopy(description)
+    changed["MenuItems"][0]["TabViews"] = [
+        tab for tab in changed["MenuItems"][0]["TabViews"] if tab["TabName"] != "Warmwasser"
+    ]
+    mock_client.get_description.return_value = changed
+    with patch.object(hass.config_entries, "async_schedule_reload") as reload:
+        freezer.tick(DESCRIPTION_MAX_AGE + timedelta(seconds=130))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    reload.assert_called_once_with(mock_config_entry.entry_id)

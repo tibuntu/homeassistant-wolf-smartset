@@ -1,6 +1,6 @@
 [project]
 name = "homeassistant-wolf-smartset"
-version = "0.1.0"
+version = "0.2.0.dev2"
 description = "Home Assistant integration for Wolf heating systems via the Wolf SmartSet cloud"
 readme = "README.md"
 requires-python = ">=3.14.2"
@@ -52,7 +52,7 @@ addopts = [
     "--cov=custom_components.wolf_smartset",
     "--cov-branch",
     "--cov-report=term-missing:skip-covered",
-    "--cov-fail-under=85",
+    "--cov-fail-under=95",
 ]
 
 [tool.coverage.run]
