@@ -302,12 +302,20 @@ def test_maintenance_is_portal_unavailable() -> None:
     assert issubclass(Maintenance, PortalUnavailable)
 
 
-@pytest.mark.parametrize("step", ["connect/authorize", "Account/Login", "connect/token"])
-async def test_429_during_login(portal: FakePortal, step: str) -> None:
-    """HTTP 429 on any login step is throttling."""
+@pytest.mark.parametrize(
+    ("step", "method"),
+    [
+        ("connect/authorize", "GET"),
+        ("Account/Login", "GET"),
+        ("Account/Login", "POST"),
+        ("connect/token", "POST"),
+    ],
+)
+async def test_429_during_login(portal: FakePortal, step: str, method: str) -> None:
+    """HTTP 429 on every login request (page, form post, token) is throttling."""
 
     def throttled(request: httpx.Request) -> httpx.Response:
-        if step in str(request.url):
+        if step in str(request.url) and request.method == method:
             return httpx.Response(429)
         return portal(request)
 
