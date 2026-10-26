@@ -76,7 +76,7 @@ Urlaubsmodus            ValueId 22003500000  CT 24  same structure, ValueIds 330
 
 ## 6. Open questions (to measure, read-only first)
 
-1. Do the day values (CT 14) update through the normal bundle 1000, or only through sub bundle 400 with `IsSubBundle: true`?
+1. Do the day values (CT 14) update through the normal bundle 1000, or only through sub bundle 400 with `IsSubBundle: true`? Measured 2026-10-26 for the selectors (CT 13): both come back through bundle 1000 with `State 1` (`tests/fixtures/real/values_0.json`). The day values are still unmeasured.
 2. Does writing one day string change only that day, and does the controller accept fewer than five slots?
 3. For party mode: must start and end be written together with the activation flag in one request, and in which order does the portal send them?
 4. Is "Uhrzeit/Datum BM2" writable from the portal, and should it ever be (clock sync)? Probably no.
