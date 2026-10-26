@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.2.1...v0.3.0) (2026-10-26)
+
+
+### Features
+
+* map the time program selector (ControlType 13) to a select entity ([c3fceae](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/c3fceae48b52d009dfed5c2890bdf1c8ac1b3c1d))
+* stable translation keys for curated parameters ([a55ede0](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/a55ede0ae363a3e04e0960bbf43bb6d8ade007e1))
+
 ## [0.2.1](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.2.0...v0.2.1) (2026-10-26)
 
 
