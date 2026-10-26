@@ -22,3 +22,24 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: .release-please-config.json
+
+  # HACS installs from this asset (hacs.json: zip_release) and counts its downloads.
+  # If the upload fails, attach it by hand:
+  #   git archive --format=zip -o wolf_smartset.zip vX.Y.Z:custom_components/wolf_smartset
+  #   gh release upload vX.Y.Z wolf_smartset.zip --clobber
+  upload-asset:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - name: Attach the integration as a zip asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          git archive --format=zip --output wolf_smartset.zip HEAD:custom_components/wolf_smartset
+          gh release upload "$TAG" wolf_smartset.zip --clobber
