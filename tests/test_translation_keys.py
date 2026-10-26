@@ -77,6 +77,13 @@ def test_key_only_on_the_curated_platform(description: dict[str, Any]) -> None:
     assert parameter.translation_key is None
 
 
+def test_time_program_selectors_have_keys(description: dict[str, Any]) -> None:
+    """The weekly program selectors are curated like 'Programmwahl'."""
+    parameters = parse_description(description).parameters
+    assert parameters[36001600001].translation_key == "time_program_heating"
+    assert parameters[35000400000].translation_key == "time_program_dhw"
+
+
 def test_keys_are_unique_per_platform_and_valid() -> None:
     """Dashboards look keys up per platform; hassfest restricts the characters."""
     for platform, table in TRANSLATION_KEYS.items():

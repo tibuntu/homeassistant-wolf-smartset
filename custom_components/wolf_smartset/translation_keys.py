@@ -71,6 +71,8 @@ TRANSLATION_KEYS: dict[str, dict[int, str]] = {
     "select": {
         36005100001: "program_heating",
         35001200000: "program_dhw",
+        36001600001: "time_program_heating",
+        35000400000: "time_program_dhw",
     },
     "switch": {
         22004200000: "one_time_dhw_charge",

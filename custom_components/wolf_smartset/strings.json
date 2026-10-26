@@ -122,6 +122,12 @@
       },
       "program_heating": {
         "name": "Program heating"
+      },
+      "time_program_dhw": {
+        "name": "Time program DHW"
+      },
+      "time_program_heating": {
+        "name": "Time program heating"
       }
     },
     "sensor": {
