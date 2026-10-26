@@ -122,6 +122,12 @@
       },
       "program_heating": {
         "name": "Programmwahl (Heizung)"
+      },
+      "time_program_dhw": {
+        "name": "Zeitprogramm (Warmwasser)"
+      },
+      "time_program_heating": {
+        "name": "Zeitprogramm (Heizung)"
       }
     },
     "sensor": {

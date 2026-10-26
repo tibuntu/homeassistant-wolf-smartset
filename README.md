@@ -55,6 +55,8 @@ The table below is the complete list. Keys follow the English entity-ID suffixes
 | `setpoint_correction` | Sollwertkorrektur | number | System | 36002900001 |
 | `program_dhw` | Programmwahl (Warmwasser) | select | System | 35001200000 |
 | `program_heating` | Programmwahl (Heizung) | select | System | 36005100001 |
+| `time_program_dhw` | Zeitprogramm (Warmwasser) | select | System | 35000400000 |
+| `time_program_heating` | Zeitprogramm (Heizung) | select | System | 36001600001 |
 | `3_way_diverter_valve_htg_clg` | 3-Wege-Umschaltventil HZ/K | sensor | Heizgerät | 27001400001 |
 | `3_way_diverter_valve_htg_dhw` | 3-Wege-Umschaltventil HZ/WW | sensor | Heizgerät | 27001300001 |
 | `average_outside_temperature` | Gemittelte Außentemperatur | sensor | Bedienmodul BM-2 | 36000100001 |
