@@ -1,18 +1,19 @@
-# Time programs and timed functions – concept (no implementation yet)
+# Time programs and timed functions – concept
 
-Status: analysis for a later phase. Nothing described here is implemented. Source: the recorded description of the owner's CHA heat pump with BM-2 (`tests/fixtures/real/description_0.json`) and the portal JavaScript (`EnControlType`, discovery section 4.3). Example values below are illustrative, not the owner's schedule.
+Status: option A (the program selector as `select`) is implemented, see `CT_TIME_PROGRAM` in `model.py`. Everything else is analysis for a later phase. Source: the recorded description of the owner's CHA heat pump with BM-2 (`tests/fixtures/real/description_0.json`) and the portal JavaScript (`EnControlType`, discovery section 4.3). Example values below are illustrative, not the owner's schedule.
 
 ## 1. What is unmapped today
 
-63 of 288 parameters have no entity type:
+61 of 288 parameters have no entity type:
 
 | ControlType | Name in the portal | Count | Examples |
 |---|---|---|---|
 | 14 | `DaySwitchTimes` | 42 | "Mo" … "So" of each time program |
 | 10 | `TimeInput` | 10 | "Uhrzeit Start/Ende" of party and holiday mode, "Uhrzeit BM2" |
 | 9 | `DateInput` | 7 | "Datum Start/Ende" of party and holiday mode, "Datum BM2" |
-| 13 | `TimeProgram` | 2 | "Zeitprogramm" (heating circuit, DHW): selects program 1, 2 or 3 |
 | 24 | `TimedFunction` | 2 | "Partymodus", "Urlaubsmodus" |
+
+The two `TimeProgram` selectors (`ControlType 13`, "Zeitprogramm" of the heating circuit and DHW) are `select` entities with the options 1, 2 and 3 (option A below).
 
 Containers without data point (`ValueId 0`, `NoDataPoint`) such as "Zeitprogramm 1" (`ControlType 19`, `TimeSubProgram`) are already skipped by the model.
 
@@ -69,7 +70,7 @@ Urlaubsmodus            ValueId 22003500000  CT 24  same structure, ValueIds 330
 
 ## 5. Recommendation
 
-1. **Next:** option A for the program selectors. It needs no new write path and no new entity type: map `ControlType 13` to `select` with its list items. The day values stay unmapped.
+1. **Done:** option A for the program selectors. It needed no new write path and no new entity type: `ControlType 13` maps to `select` with its list items. The day values stay unmapped.
 2. **Later, separately:** option E for party and holiday mode, after a multi-value `write_values` in the client and a measurement of sub-bundle reads.
 3. **Not planned:** option B. Options C and D only if there is a concrete use case that A cannot cover.
 

@@ -1,4 +1,4 @@
-"""Writable list parameters (ControlType 1 and 35)."""
+"""Writable list parameters (ControlType 1, 13 and 35)."""
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant

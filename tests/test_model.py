@@ -55,6 +55,16 @@ def test_select_and_labels(description: dict[str, Any]) -> None:
     assert len({(p.device, p.label) for p in mapped}) == len(mapped)
 
 
+def test_time_program_selector_is_a_select(description: dict[str, Any]) -> None:
+    """ControlType 13 chooses weekly program 1, 2 or 3; the day strings stay unmapped."""
+    parameters = parse_description(description).parameters
+    heating, dhw = parameters[36001600001], parameters[35000400000]
+    assert (heating.kind, dhw.kind) == (Kind.SELECT, Kind.SELECT)
+    assert (heating.label, dhw.label) == ("Zeitprogramm (Heizung)", "Zeitprogramm (Warmwasser)")
+    assert heating.selectable == ["1", "2", "3"]
+    assert parameters[32006300001].kind is None  # "Mo" of Zeitprogramm 1
+
+
 def test_devices_from_expert_submenus(description: dict[str, Any]) -> None:
     """Every expert submenu is a device; user-only parameters stay on the system."""
     desc = parse_description(description)
