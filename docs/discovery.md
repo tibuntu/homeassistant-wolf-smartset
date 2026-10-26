@@ -598,3 +598,26 @@ Freigabe des Eigentümers; ein einziger Write, danach nur Polls. Ausgangslage 18
 2. Die Regelung setzt den Parameter selbst auf 0 zurück. Hier nach etwa 16 Minuten, bei 37 °C, also weder nach der im Portal genannten Stunde noch bei Solltemperatur. Was das Ende ausgelöst hat, zeigen die gepollten Werte nicht.
 3. Zusammen mit Abschnitt 14: Der Parameter hat einen lesbaren Zustand, die Regelung beendet ihn selbst, und Schreiben von 0 beendet ihn vorzeitig.
 4. **Entscheidung (Eigentümer, 2026-10-25):** Der Parameter bleibt ein `switch`. Er zeigt, ob 1x läuft, folgt dem Rücksetzen der Regelung über den Poll und kann die Ladung abbrechen. Ein `button` hätte das Abbrechen und den sichtbaren Zustand verloren.
+
+## 16. Nachtrag 2026-10-26: Wiederkehrende Login-Ausfälle
+
+Quelle: HA-Log und Recorder der Anlage des Eigentümers, Quellcode von `wolf-comm` 0.0.52 (Bibliothek der Core-Integration `wolflink` in HA 2026.10.4).
+
+| Werte verfügbar ab | Ausfall ab | Abstand | Meldung |
+|---|---|---|---|
+| 25.10. 18:31 (Neustart) | 19:31 | 60 min | login page without form |
+| 25.10. 20:50 (Neustart nach HACS-Installation) | 21:52 | 62 min | login page without form |
+| 26.10. 07:52 (Versuch im Stundentakt erfolgreich) | 09:32 | 100 min | login page without form |
+
+Dazwischen beantwortete das Portal zweimal `UpdateSession` mit HTTP 429 (21:07, 21:38); der nächste Poll vier Minuten später lief.
+
+**Beobachtung:** Die Ausfälle beginnen mit der stündlichen Neuanmeldung (Token-Laufzeit 1 h), und jeder Neustart behebt sie sofort. Eine IP-Sperre würde ein Neustart nicht aufheben.
+
+**Unterschied zu `wolf-comm`:** `wolf-comm` startet den Login mit `GET /idsrv/Account/Login?ReturnUrl=…` und bekommt dort immer das Formular. Unser Client startet mit `GET /idsrv/connect/authorize?…` wie das Web-Portal. Bei einer noch gültigen IdentityServer-Sitzung (Cookie im HTTP-Client) leitet IdentityServer dort ohne Formular direkt zur Callback-Seite mit Code weiter. Der Client suchte nur das Formular und meldete „login page without form“. Weitere Versuche mit demselben Cookie scheiterten genauso, bis ein Neustart den HTTP-Client verwarf.
+
+**Status:** Hypothese, nicht am echten Portal gemessen. Die Korrektur (0.2.1) ist auch dann unschädlich, wenn sie nicht zutrifft:
+
+1. Endet `/connect/authorize` auf der Callback-Seite mit Code, wird dieser Code eingetauscht, ohne Passwort.
+2. Kommt eine Seite ohne Formular und ohne Code, verwirft der Client seine Cookies und ruft `/connect/authorize` genau einmal neu auf.
+3. Bleibt es dabei, nennt die Fehlermeldung HTTP-Status, Pfad und Seitentitel (ohne Query-String). Damit lässt sich der nächste Ausfall eindeutig zuordnen.
+4. HTTP 429 auf `UpdateSession` allein löst keinen Backoff mehr aus; `wolf-comm` wertet die Antwort gar nicht aus.

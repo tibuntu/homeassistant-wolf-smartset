@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import hashlib
 from html.parser import HTMLParser
+import re
 import secrets
 import time
 from typing import Any
@@ -197,6 +198,20 @@ def restore_login_backoff(username: str, until: float, failures: int) -> None:
         _login_backoff[key] = (blocked_until, failures)
 
 
+def _authorization_code(response: httpx.Response) -> str | None:
+    """The code if the redirects ended on our callback, else None."""
+    if str(response.url).startswith(REDIRECT_URI):
+        return response.url.params.get("code")
+    return None
+
+
+def _describe(response: httpx.Response) -> str:
+    """Status, path and page title for the log; no query string (it carries codes)."""
+    match = re.search(r"<title[^>]*>(.*?)</title>", response.text, re.I | re.S)
+    title = " ".join(match.group(1).split())[:80] if match else "no title"
+    return f"HTTP {response.status_code}, {response.url.host}{response.url.path}, {title}"
+
+
 class WolfClient:
     """One login and one portal session per account, shared by all systems."""
 
@@ -241,30 +256,37 @@ class WolfClient:
         self.login_count += 1
         self.last_login = datetime.now().astimezone()
         try:
-            page = await self._http.get(
-                f"{AUTH_URL}/connect/authorize?{query}", follow_redirects=True
-            )
-            if page.status_code == 429:
-                raise TooManyRequests("login page")
-            token = extract_verification_token(page.text)
-            if token is None:
-                raise PortalUnavailable("login page without form")
-            result = await self._http.post(
-                page.url,
-                data={
-                    "Input.Username": self._username,
-                    "Input.Password": self._password,
-                    "__RequestVerificationToken": token,
-                },
-                follow_redirects=True,
-            )
-            if result.status_code == 429:
-                raise TooManyRequests("login")
-            code = result.url.params.get("code")
+            page = await self._authorize(query)
+            code = _authorization_code(page)
             if code is None:
-                if extract_verification_token(result.text) is not None:
-                    raise AuthError("login form shown again")
-                raise PortalUnavailable("no authorization code")
+                token = extract_verification_token(page.text)
+                if token is None:
+                    # A stale identity-server cookie can end on a page without form.
+                    # Start once more without cookies before calling it a block.
+                    self._http.cookies.clear()
+                    page = await self._authorize(query)
+                    code = _authorization_code(page)
+                    token = extract_verification_token(page.text)
+                if code is None and token is None:
+                    raise PortalUnavailable(f"login page without form ({_describe(page)})")
+            result = page
+            if code is None:
+                result = await self._http.post(
+                    page.url,
+                    data={
+                        "Input.Username": self._username,
+                        "Input.Password": self._password,
+                        "__RequestVerificationToken": token,
+                    },
+                    follow_redirects=True,
+                )
+                if result.status_code == 429:
+                    raise TooManyRequests("login")
+                code = _authorization_code(result)
+                if code is None:
+                    if extract_verification_token(result.text) is not None:
+                        raise AuthError("login form shown again")
+                    raise PortalUnavailable(f"no authorization code ({_describe(result)})")
             if result.url.params.get("state") != state:
                 raise CannotConnect("state mismatch")
             response = await self._http.post(
@@ -291,6 +313,14 @@ class WolfClient:
         lifetime = float(data.get("expires_in") or 3600)
         self._token_expires = time.monotonic() + lifetime - TOKEN_EXPIRY_MARGIN_SECONDS
         self._session_id = None
+
+    async def _authorize(self, query: str) -> httpx.Response:
+        """Start the login; ends on the login form or, with a valid IdentityServer
+        session cookie, directly on the callback with an authorization code."""
+        page = await self._http.get(f"{AUTH_URL}/connect/authorize?{query}", follow_redirects=True)
+        if page.status_code == 429:
+            raise TooManyRequests("login page")
+        return page
 
     async def _call(self, method: str, path: str, *, json: Any = None, params: Any = None) -> Any:
         try:
@@ -366,7 +396,10 @@ class WolfClient:
                 self._session_id = int(data["BrowserSessionId"])
                 self._session_refreshed = now
             elif now - self._session_refreshed >= SESSION_REFRESH_SECONDS:
-                await self._call("POST", "UpdateSession", json={"SessionId": self._session_id})
+                # The portal sometimes answers the keep-alive with 429 while the
+                # actual request still works; that alone is no reason to back off.
+                with contextlib.suppress(TooManyRequests):
+                    await self._call("POST", "UpdateSession", json={"SessionId": self._session_id})
                 self._session_refreshed = now
 
     async def _request(

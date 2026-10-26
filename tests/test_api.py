@@ -50,12 +50,22 @@ class FakePortal:
         self.state = ""
         self.token_status = 200
         self.token_body: dict[str, Any] | None = None
+        # IdentityServer session still valid: authorize redirects straight to the callback.
+        self.sso = False
+        self.silent_codes = 0
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
         self.requests += 1
         url = str(request.url)
         if url.startswith(f"{AUTH_URL}/connect/authorize"):
             self.state = request.url.params["state"]
+            if "stale=1" in request.headers.get("cookie", ""):
+                return httpx.Response(200, text="<html><title>Fehler</title></html>")
+            if self.sso:
+                self.silent_codes += 1
+                return httpx.Response(
+                    302, headers={"Location": f"{REDIRECT_URI}?code=s&state={self.state}"}
+                )
             return httpx.Response(
                 302, headers={"Location": f"{AUTH_URL}/Account/Login?ReturnUrl=x"}
             )
@@ -430,3 +440,44 @@ async def test_rejected_fresh_token_blocks_further_logins(
             await client.get_systems()
     assert portal.logins == 2
     assert client.login_blocked_seconds > 0
+
+
+async def test_silent_code_is_used_without_credentials(
+    client: WolfClient, portal: FakePortal
+) -> None:
+    """A valid IdentityServer session yields a code directly; no password is posted."""
+    portal.api["GetSystemList"] = lambda r: httpx.Response(200, json=[])
+    portal.sso = True
+    await client.get_systems()
+    assert (portal.silent_codes, portal.logins) == (1, 0)
+    assert client.login_blocked_seconds == 0
+
+
+async def test_stale_cookie_is_dropped_once(portal: FakePortal) -> None:
+    """A page without form first retries without cookies, then logs in normally."""
+    portal.api["GetSystemList"] = lambda r: httpx.Response(200, json=[])
+    async with httpx.AsyncClient(transport=httpx.MockTransport(portal)) as http:
+        http.cookies.set("stale", "1", domain="www.wolf-smartset.com")
+        await WolfClient(http, "user", portal.password).get_systems()
+        assert not http.cookies
+    assert portal.logins == 1
+
+
+async def test_page_without_form_is_described(client: WolfClient, portal: FakePortal) -> None:
+    """The error names status, path and title, never the query string."""
+    portal.login_page = "<html><title> Wartung \n heute </title></html>"
+    with pytest.raises(PortalUnavailable) as err:
+        await client.get_systems()
+    message = str(err.value)
+    assert "HTTP 200, www.wolf-smartset.com/idsrv/Account/Login, Wartung heute" in message
+    assert "ReturnUrl" not in message
+
+
+async def test_keep_alive_429_is_ignored(client: WolfClient, portal: FakePortal) -> None:
+    """UpdateSession answered with 429 does not fail the actual request."""
+    portal.api["GetSystemList"] = lambda r: httpx.Response(200, json=[])
+    portal.api["UpdateSession"] = lambda r: httpx.Response(429)
+    await client.get_systems()
+    client._session_refreshed -= 61
+    assert await client.get_systems() == []
+    assert portal.calls.count("UpdateSession") == 1
