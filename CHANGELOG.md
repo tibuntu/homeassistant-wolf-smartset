@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.3.0...v0.4.0) (2026-10-26)
+
+
+### Features
+
+* ship the Wolf brand icon and logo in brand/ ([d949295](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/d9492953b763caf2910bfbb17b1ff60cfa9c6254))
+
+
+### Bug Fixes
+
+* translation keys for the time program selectors ([e0b859a](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/e0b859aa8d878d5094e933acbac01a4d355cd599))
+
 ## [0.3.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.2.1...v0.3.0) (2026-10-26)
 
 
