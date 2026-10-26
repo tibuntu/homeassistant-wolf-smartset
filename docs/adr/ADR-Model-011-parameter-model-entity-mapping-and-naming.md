@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Rule 1 (no translation keys for parameter entities) is amended by [ADR-Model-016](ADR-Model-016-stable-translation-keys.md): curated parameters carry a stable translation key.
 
 ## Date
 

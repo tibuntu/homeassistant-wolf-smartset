@@ -41,6 +41,74 @@ Some parameters exist in every description but only carry data on some installat
 
 The setting only applies when an entity is created. Installations that already ran version 0.1.0 keep these entities enabled until you disable them yourself.
 
+## Translation keys
+
+Curated parameters carry a fixed, language-independent `translation_key` ([ADR-Model-016](docs/adr/ADR-Model-016-stable-translation-keys.md)). Dashboards and cards can find an entity through it regardless of entity ID, device name and Home Assistant language, for example with a template over the entity registry or the `wolf` preset of the Heat Pump Hydraulic Card. The keys are a public interface: they only change additively, a key is never renamed or reassigned.
+
+The table below is the complete list. Keys follow the English entity-ID suffixes of the core `wolflink` integration where the same value exists there. The Wolf parameter column is the German label the entity shows on a German system; English systems show an English name. Entity IDs, unique IDs and state values do not change with this feature. Parameters outside the table behave as before (Wolf label, no key).
+
+| Key | Wolf parameter | Platform | Device | ParameterId |
+|---|---|---|---|---|
+| `day_temperature_heating` | Tagtemperatur (Heizung) (Gemeinsame Einstellungen) | number | Bedienmodul BM-2 | 36006800001 |
+| `day_temperature_mixer_circuit_1` | Tagtemperatur (Heizung) (Mischerkreis 1) | number | Bedienmodul BM-2 | 36008400001 |
+| `set_dhw_temperature` | Warmwassersolltemperatur eingestellt | number | System | 35000900000 |
+| `setpoint_correction` | Sollwertkorrektur | number | System | 36002900001 |
+| `program_dhw` | Programmwahl (Warmwasser) | select | System | 35001200000 |
+| `program_heating` | Programmwahl (Heizung) | select | System | 36005100001 |
+| `3_way_diverter_valve_htg_clg` | 3-Wege-Umschaltventil HZ/K | sensor | Heizgerät | 27001400001 |
+| `3_way_diverter_valve_htg_dhw` | 3-Wege-Umschaltventil HZ/WW | sensor | Heizgerät | 27001300001 |
+| `average_outside_temperature` | Gemittelte Außentemperatur | sensor | Bedienmodul BM-2 | 36000100001 |
+| `boiler_water_temperature` | Kesseltemperatur | sensor | Heizgerät | 27000600001 |
+| `clg_energy_amount` | Energiemenge Kühl. | sensor | Heizgerät | 27006100001 |
+| `compressor_frequency` | Verdichterfrequenz | sensor | Heizgerät | 27004800001 |
+| `compressor_operating_hours` | Betriebsstunden Verdichter | sensor | Heizgerät | 27002700001 |
+| `compressor_status` | Verdichterstatus | sensor | Heizgerät | 27005100001 |
+| `consumption_current_month` | Verbrauch aktueller Monat | sensor | Heizgerät | 27016200001 |
+| `consumption_current_year` | Verbrauch aktuelles Jahr | sensor | Heizgerät | 27016400001 |
+| `consumption_previous_day` | Verbrauch Vortag | sensor | Heizgerät | 27017500001 |
+| `consumption_previous_year` | Verbrauch Vorjahr | sensor | Heizgerät | 27016600001 |
+| `consumption_year_before_last` | Verbrauch Vorvorjahr | sensor | Heizgerät | 27016800001 |
+| `current_capacity_specification_compressor` | Aktuelle Leistungsvorgabe Verdichter | sensor | Heizgerät | 27001000001 |
+| `current_secondary_power` | Aktuelle Sekundärleistung | sensor | Heizgerät | 27005800001 |
+| `dhw_status` | Warmwasser Status | sensor | System | 35000100000 |
+| `dhw_temperature` | Warmwassertemperatur | sensor | Heizgerät | 27000700001 |
+| `e_heating_operating_hours` | Betriebsstunden E-Heizung | sensor | Heizgerät | 27003800001 |
+| `electric_booster_heater` | E-Heizung | sensor | Heizgerät | 27001600001 |
+| `energy_amount_dhw` | Energiemenge WW | sensor | Heizgerät | 27006000001 |
+| `energy_amount_htg` | Energiemenge HZ | sensor | Heizgerät | 27005900001 |
+| `feed_heating_circuit_pump` | Zubringer-/Heizkreispumpe | sensor | Heizgerät | 27001200001 |
+| `flow_temperature` | Vorlauftemperatur | sensor | Bedienmodul BM-2 | 36001100001 |
+| `hc_flow_rate` | Heizkreisdurchfluss | sensor | Heizgerät | 27002800001 |
+| `header_temperature` | Sammlertemperatur | sensor | Heizgerät | 27002900001 |
+| `heat_generated_current_month` | Erzeugte Wärmemenge aktueller Monat | sensor | Heizgerät | 27016300001 |
+| `heat_generated_current_year` | Erzeugte Wärmemenge aktuelles Jahr | sensor | Heizgerät | 27016500001 |
+| `heat_generated_previous_day` | Erzeugte Wärmemenge Vortag | sensor | Heizgerät | 27017600001 |
+| `heat_generated_previous_year` | Erzeugte Wärmemenge Vorjahr | sensor | Heizgerät | 27016700001 |
+| `heat_generated_year_before_last` | Erzeugte Wärmemenge Vorvorjahr | sensor | Heizgerät | 27016900001 |
+| `heating_circuit_pump` | Heizkreispumpe | sensor | Heizgerät | 27001100001 |
+| `jaz_current_year` | JAZ aktuelles Jahr | sensor | Heizgerät | 27017200001 |
+| `jaz_previous_year` | JAZ Vorjahr | sensor | Heizgerät | 27017300001 |
+| `jaz_year_before_last` | JAZ Vorvorjahr | sensor | Heizgerät | 27017400001 |
+| `maz_current_month` | MAZ aktueller Monat | sensor | Heizgerät | 27017100001 |
+| `mixer_circuit_demand` | Anforderung Mischerkreis | sensor | Bedienmodul BM-2 | 36000400001 |
+| `mixer_circuit_pump` | Mischerkreispumpe | sensor | System | 4007000001 |
+| `mixer_circuit_status` | Mischerkreis Status | sensor | Bedienmodul BM-2 | 36000500001 |
+| `mixer_flow_sensor_vf` | MI72 Analogeingang Vorlauffühler VF | sensor | Mischermodul MM1 | 4002700001 |
+| `mixer_motor` | Mischermotor | sensor | Mischermodul MM1 | 4000200001 |
+| `mkp_mixer_circuit_pump` | Ausgang MKP | sensor | Mischermodul MM1 | 4000100001 |
+| `operating_mode_heater` | Betriebsart Heizgerät | sensor | Heizgerät | 27005000001 |
+| `outside_temperature` | Außentemperatur (Heizung) | sensor | Heizgerät | 27000500001 |
+| `power_consumption_wp_ehz` | Leistungsaufnahme (WP + EHZ) | sensor | Heizgerät | 27004900001 |
+| `return_temperature` | Rücklauftemperatur | sensor | Heizgerät | 27000900001 |
+| `room_temperature` | Raumtemperatur | sensor | Bedienmodul BM-2 | 36000000001 |
+| `set_boiler_temperature` | Kesselsolltemperatur | sensor | Heizgerät | 27000400001 |
+| `set_dhw_temperature_adjusted` | Warmwassersolltemperatur | sensor | Heizgerät | 27000800001 |
+| `system_pressure` | Anlagendruck | sensor | Heizgerät | 27003000001 |
+| `taz_previous_day` | TAZ Vortag | sensor | Heizgerät | 27017700001 |
+| `one_time_dhw_charge` | 1x Warmwasser | switch | System | 22004200000 |
+
+The table covers a CHA heat pump with BM-2 and MM1 (one mixer circuit). A second mixer circuit or module gets its own rows with a `_mixer_circuit_2` suffix once an installation provides the IDs. A key applies only on the platform listed here; when the same parameter maps to another platform on an installation (for example a read-only "1x Warmwasser" becomes a sensor), the entity keeps the Wolf label and has no key.
+
 ## Writing
 
 Every write ends up in the non-volatile memory (EEPROM) of the Wolf controller. The integration therefore runs every change through one pipeline ([ADR-Writes-013](docs/adr/ADR-Writes-013-write-pipeline-with-explicit-confirmation.md)):
@@ -65,7 +133,7 @@ Settings › Devices & services › Wolf SmartSet › three-dot menu › *Delete
 ## Known limitations
 
 - Time programs, dates, times, party and holiday mode are not mapped yet ([concept](docs/time-programs.md)).
-- Entity names are Wolf's German labels, the same as in the SmartSet app and the manuals.
+- Entity names are Wolf's German labels, the same as in the SmartSet app and the manuals. Curated parameters (see [Translation keys](#translation-keys)) are translated and show English names on non-German systems.
 - The interface is unofficial. Wolf changes the login flow several times a year; a broken login shows as "portal unavailable" until a fix is released.
 - Only one installation (Wolf CHA heat pump with BM-2 and MM1, Link home gateway) has been tested so far.
 - The icon under `brand/` is a neutral placeholder. An entry in [home-assistant/brands](https://github.com/home-assistant/brands) is a follow-up.
