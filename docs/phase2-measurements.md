@@ -26,9 +26,24 @@ Redaction finding: `GetSystemList` returns `GatewayUsername`, which equals the L
 | Verbrauch, JAZ, TAZ, MAZ | `0.0`; no S0 meter connected. No visibility condition in the description, WP110 shows 1000 regardless |
 | ValueId prefix vs. device | unanimous for 4, 19, 22, 27, 36; no evidence for 35 (DHW). See ADR-Model-009 |
 
+## 2026-10-26 – Availability before and after 0.2.1 (recorder, read-only)
+
+Source: the recorder database of the owner's Home Assistant, transitions of `sensor.*_warmwassertemperatur` to and from `unavailable`, read with a read-only SQLite query. The integration does not log logins, so the outages are the measurable trace of a failed hourly token renewal. Times in CET.
+
+| Up since | Down at | Up for | Note |
+|---|---|---|---|
+| 25.10. 19:04 | 19:31 | 27 min | discovery 16: "login page without form" |
+| 25.10. 21:50 | 22:07 | 17 min | restarts and re-setups during the review remediation |
+| 25.10. 22:12 | 22:38 | 26 min | |
+| 25.10. 22:42 | 22:52 | 10 min | |
+| 26.10. 08:52 | 10:32 | 100 min | hourly retry succeeded, discovery 16 |
+| 26.10. 12:13 | none until 19:45 | 7.5 h | `.storage/wolf_smartset.login_backoff` emptied at 12:13 by the successful login; the 0.3.0 restart at 19:12 left no gap |
+
+Result: before 0.2.1 the integration lost the portal 17 to 100 minutes after each login; since 12:13 it survived seven hourly token renewals. That matches the hypothesis of discovery 16 (a still valid IdentityServer session answers `/connect/authorize` with the code instead of the form). It is not a proof that the fix caused it: the portal itself may have behaved differently. A further day without outage closes the question.
+
 ## Next measurements (HA test run)
 
-- Logins per day and time between logins (diagnostics `login_count`, `last_login`); expectation: about one per token lifetime.
+- Logins per day: not logged; only the diagnostics (`login_count`, `last_login`) have them. Availability from the recorder is the proxy (section above).
 - Throttling: backoff steps and repair issues over 24 h at the default 120 s interval.
-- Expert values: enable a few expert sensors (for example Sparfaktor, heating curve) and check whether their values change or freeze without an expert session.
+- Expert values: enabled on 2026-10-26 (Sparfaktor, Sockeltemperatur, Vorlauftemperatur Heizkurve); the recorder shows on 2026-10-27 whether they change or freeze without an expert session.
 - Parallel operation is not part of the test: core `wolflink` is disabled before the first start (ADR-Integration-000).
