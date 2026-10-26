@@ -47,7 +47,12 @@ class WolfEntity(CoordinatorEntity[WolfSystemCoordinator]):
         self.parameter = parameter
         system_id = coordinator.system.id
         self._attr_unique_id = f"{system_id}_{parameter.parameter_id}"
-        self._attr_name = parameter.label
+        # Curated parameters are named through translations (ADR-Model-016); a name
+        # attribute would win over the translation, so it is only set for the rest.
+        if parameter.translation_key:
+            self._attr_translation_key = parameter.translation_key
+        else:
+            self._attr_name = parameter.label
         self._attr_entity_registry_enabled_default = parameter.enabled_by_default
         if parameter.writable and parameter.kind in (Kind.NUMBER, Kind.SELECT):
             self._attr_entity_category = EntityCategory.CONFIG

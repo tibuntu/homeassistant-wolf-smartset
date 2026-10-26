@@ -12,6 +12,8 @@ import re
 from typing import Any
 import unicodedata
 
+from .translation_keys import TRANSLATION_KEYS
+
 _LOGGER = logging.getLogger(__name__)
 
 # Values of EnControlType in the portal JavaScript.
@@ -50,6 +52,18 @@ class Kind(StrEnum):
     NUMBER = "number"
     SELECT = "select"
     SWITCH = "switch"
+
+
+# Kind -> Home Assistant platform, the first level of TRANSLATION_KEYS and strings.json.
+PLATFORMS: dict[Kind, str] = {
+    Kind.SENSOR: "sensor",
+    Kind.ENUM: "sensor",
+    Kind.TEXT: "sensor",
+    Kind.BINARY: "binary_sensor",
+    Kind.NUMBER: "number",
+    Kind.SELECT: "select",
+    Kind.SWITCH: "switch",
+}
 
 
 @dataclass(frozen=True)
@@ -139,6 +153,14 @@ class Parameter:
             return Kind.TEXT
         # ponytail: dates, times, time programs, timed functions are not mapped yet
         return None
+
+    @property
+    def translation_key(self) -> str | None:
+        """Curated key, only when the parameter maps to the platform it was curated for."""
+        kind = self.kind
+        if kind is None:
+            return None
+        return TRANSLATION_KEYS.get(PLATFORMS[kind], {}).get(self.parameter_id)
 
 
 @dataclass

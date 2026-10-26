@@ -101,6 +101,185 @@
       "undo": {
         "name": "Undo last change"
       }
+    },
+    "number": {
+      "day_temperature_heating": {
+        "name": "Day temperature heating"
+      },
+      "day_temperature_mixer_circuit_1": {
+        "name": "Day temperature mixer circuit 1"
+      },
+      "set_dhw_temperature": {
+        "name": "Set DHW temperature"
+      },
+      "setpoint_correction": {
+        "name": "Setpoint correction"
+      }
+    },
+    "select": {
+      "program_dhw": {
+        "name": "Program DHW"
+      },
+      "program_heating": {
+        "name": "Program heating"
+      }
+    },
+    "sensor": {
+      "3_way_diverter_valve_htg_clg": {
+        "name": "3-way diverter valve HTG/CLG"
+      },
+      "3_way_diverter_valve_htg_dhw": {
+        "name": "3-way diverter valve HTG/DHW"
+      },
+      "average_outside_temperature": {
+        "name": "Average outside temperature"
+      },
+      "boiler_water_temperature": {
+        "name": "Boiler water temperature"
+      },
+      "clg_energy_amount": {
+        "name": "CLG energy amount"
+      },
+      "compressor_frequency": {
+        "name": "Compressor frequency"
+      },
+      "compressor_operating_hours": {
+        "name": "Compressor operating hours"
+      },
+      "compressor_status": {
+        "name": "Compressor status"
+      },
+      "consumption_current_month": {
+        "name": "Consumption current month"
+      },
+      "consumption_current_year": {
+        "name": "Consumption current year"
+      },
+      "consumption_previous_day": {
+        "name": "Consumption previous day"
+      },
+      "consumption_previous_year": {
+        "name": "Consumption previous year"
+      },
+      "consumption_year_before_last": {
+        "name": "Consumption year before last"
+      },
+      "current_capacity_specification_compressor": {
+        "name": "Current capacity specification compressor"
+      },
+      "current_secondary_power": {
+        "name": "Current secondary power"
+      },
+      "dhw_status": {
+        "name": "DHW status"
+      },
+      "dhw_temperature": {
+        "name": "DHW temperature"
+      },
+      "e_heating_operating_hours": {
+        "name": "E-heating operating hours"
+      },
+      "electric_booster_heater": {
+        "name": "Electric booster heater"
+      },
+      "energy_amount_dhw": {
+        "name": "Energy amount DHW"
+      },
+      "energy_amount_htg": {
+        "name": "Energy amount HTG"
+      },
+      "feed_heating_circuit_pump": {
+        "name": "Feed/heating circuit pump"
+      },
+      "flow_temperature": {
+        "name": "Flow temperature"
+      },
+      "hc_flow_rate": {
+        "name": "Heating circuit flow rate"
+      },
+      "header_temperature": {
+        "name": "Header temperature"
+      },
+      "heat_generated_current_month": {
+        "name": "Heat generated current month"
+      },
+      "heat_generated_current_year": {
+        "name": "Heat generated current year"
+      },
+      "heat_generated_previous_day": {
+        "name": "Heat generated previous day"
+      },
+      "heat_generated_previous_year": {
+        "name": "Heat generated previous year"
+      },
+      "heat_generated_year_before_last": {
+        "name": "Heat generated year before last"
+      },
+      "heating_circuit_pump": {
+        "name": "Heating circuit pump"
+      },
+      "jaz_current_year": {
+        "name": "Seasonal performance factor (JAZ) current year"
+      },
+      "jaz_previous_year": {
+        "name": "Seasonal performance factor (JAZ) previous year"
+      },
+      "jaz_year_before_last": {
+        "name": "Seasonal performance factor (JAZ) year before last"
+      },
+      "maz_current_month": {
+        "name": "Monthly performance factor (MAZ) current month"
+      },
+      "mixer_circuit_demand": {
+        "name": "Mixer circuit demand"
+      },
+      "mixer_circuit_pump": {
+        "name": "Mixer circuit pump"
+      },
+      "mixer_circuit_status": {
+        "name": "Mixer circuit status"
+      },
+      "mixer_flow_sensor_vf": {
+        "name": "Mixer flow sensor VF"
+      },
+      "mixer_motor": {
+        "name": "Mixer motor"
+      },
+      "mkp_mixer_circuit_pump": {
+        "name": "MKP mixer circuit pump"
+      },
+      "operating_mode_heater": {
+        "name": "Operating mode heater"
+      },
+      "outside_temperature": {
+        "name": "Outside temperature"
+      },
+      "power_consumption_wp_ehz": {
+        "name": "Power consumption (HP + EHZ)"
+      },
+      "return_temperature": {
+        "name": "Return temperature"
+      },
+      "room_temperature": {
+        "name": "Room temperature"
+      },
+      "set_boiler_temperature": {
+        "name": "Set boiler temperature"
+      },
+      "set_dhw_temperature_adjusted": {
+        "name": "Set DHW temperature (adjusted)"
+      },
+      "system_pressure": {
+        "name": "System pressure"
+      },
+      "taz_previous_day": {
+        "name": "Daily performance factor (TAZ) previous day"
+      }
+    },
+    "switch": {
+      "one_time_dhw_charge": {
+        "name": "One-time DHW charge"
+      }
     }
   }
 }
