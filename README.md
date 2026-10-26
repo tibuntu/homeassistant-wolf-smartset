@@ -11,6 +11,8 @@ Wolf does not support third-party access. Design decisions are recorded in [`doc
 3. If the core integration "Wolf SmartSet Service" (`wolflink`) is set up for the same account, disable it first: Settings › Devices & services › Wolf SmartSet Service › three-dot menu › *Disable*. Two integrations on one account log in from the same IP address, and Wolf blocks the address for up to an hour after too many logins. The block also hits the SmartSet app.
 4. Settings › Devices & services › *Add integration* › "Wolf SmartSet (read/write)".
 
+The Wolf icon and logo ship with the integration in `brand/`; Home Assistant shows local brand images since 2026.3. [home-assistant/brands](https://github.com/home-assistant/brands) no longer takes custom integrations, and the images are the Wolf set from that repository (`custom_integrations/wolf`).
+
 ## Configuration
 
 The integration asks for the username and password of your Wolf SmartSet account (the password has at most 30 characters, the portal silently truncates longer ones). It lists the systems of the account; with more than one you choose which to add. One entry per account; a second account is a second entry.
@@ -140,7 +142,6 @@ Settings › Devices & services › Wolf SmartSet › three-dot menu › *Delete
 - Entity names are Wolf's German labels, the same as in the SmartSet app and the manuals. Curated parameters (see [Translation keys](#translation-keys)) are translated and show English names on non-German systems.
 - The interface is unofficial. Wolf changes the login flow several times a year; a broken login shows as "portal unavailable" until a fix is released.
 - Only one installation (Wolf CHA heat pump with BM-2 and MM1, Link home gateway) has been tested so far.
-- The icon under `brand/` is a neutral placeholder. An entry in [home-assistant/brands](https://github.com/home-assistant/brands) is a follow-up.
 
 ## Troubleshooting
 
