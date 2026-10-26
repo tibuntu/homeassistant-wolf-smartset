@@ -4,7 +4,7 @@ Read-only review of the integration against ADR-Writes-012 (ADR-Writes-004 and -
 
 The reproductions of findings 1 to 3 live in `tests/test_review_findings.py` as strict `xfail` tests that assert the desired behaviour. Fixing a finding makes its test pass; remove the marker in the same change.
 
-Status later the same day: findings 1 and 7 are fixed in commit c31b7b0 (ADR-Writes-013 supersedes ADR-Writes-012; written values are held for 30 s and until the value was polled, pending records become `confirmed: false` after a restart). The first real writes took place with the owner's approval (discovery, section 14). Findings 2 and 3 remain open; their tests stay `xfail`.
+Status later the same day: findings 1 and 7 are fixed in commit c31b7b0 (ADR-Writes-013 supersedes ADR-Writes-012; written values are held for 30 s and until the value was polled, pending records become `confirmed: false` after a restart). The first real writes took place with the owner's approval (discovery, section 14). Finding 3 was fixed on the remediation branch (ADR-Client-014), finding 2 closed on 2026-10-26 with the recorded response body; no `xfail` remains.
 
 ## Verdict
 
@@ -65,7 +65,7 @@ Formally below Bronze, materially close to Silver. Cheapest steps to Bronze: tes
 ## Decisions needed before implementation
 
 1. **Finding 1.** Decided: ADR-Writes-013 holds the written value for 30 s and until the value was polled.
-2. **Finding 2.** Real writes have happened (discovery, section 14: "Antwort des Portals ohne Fehler"), but the shape of the response body is still not recorded in `tests/fixtures/`. Record it on the next approved write and define the success criterion from it, or reintroduce read-back confirmation as in ADR-Writes-004? **Recording in place (T1 of the remediation plan): every applied write stores the redacted response in its history record; the fixture and the validation are the owner's next step.**
+2. **Finding 2.** Real writes have happened (discovery, section 14: "Antwort des Portals ohne Fehler"), but the shape of the response body is still not recorded in `tests/fixtures/`. Record it on the next approved write and define the success criterion from it, or reintroduce read-back confirmation as in ADR-Writes-004? **Recording in place (T1 of the remediation plan): every applied write stores the redacted response in its history record; the fixture and the validation are the owner's next step.** Decided 2026-10-26: the body of an applied write is `{"Dummy": 0}` (`tests/fixtures/real/write_response_0.json`, DHW setpoint 48 → 47 and back, both confirmed by the read-back). It carries no state, so the read-back confirmation of ADR-Writes-013 is the success criterion and the body stays in the history only to notice a change on Wolf's side.
 3. **Finding 3.** Which error classes count as a failed login, how long the backoff is, and whether HA setup retries reuse the client.
 
 ## Suggested task grouping (files must not overlap for parallel work)
@@ -91,7 +91,7 @@ Formally below Bronze, materially close to Silver. Cheapest steps to Bronze: tes
 | Finding | Status |
 |---|---|
 | 1, 7 | fixed in c31b7b0 (ADR-Writes-013) |
-| 2 | recording in place (T1); fixture and validation pending the owner's approved write |
+| 2 | closed 2026-10-26: the recorded body is `{"Dummy": 0}`; nothing to interpret, the read-back (ADR-Writes-013) is the success criterion |
 | 3, 17 | fixed (ADR-Client-014) |
 | 4, 11, 19 | fixed (README, de.json, brand assets) |
 | 5, 6, 8, 9, 16, 18, 20, 21, 22, 24 | fixed (T4, one commit each) |
