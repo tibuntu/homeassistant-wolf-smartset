@@ -72,7 +72,7 @@ Urlaubsmodus            ValueId 22003500000  CT 24  same structure, ValueIds 330
 
 1. **Done:** option A for the program selectors. It needed no new write path and no new entity type: `ControlType 13` maps to `select` with its list items. The day values stay unmapped.
 2. **Later, separately:** option E for party and holiday mode, after a multi-value `write_values` in the client and a measurement of sub-bundle reads.
-3. **Not planned:** option B. Options C and D only if there is a concrete use case that A cannot cover.
+3. **Not planned:** option B. Options C and D only if there is a concrete use case that A cannot cover. Rebuilding a schedule with Home Assistant automations is possible with "Programmwahl" alone, but costs one write per switch and is fail-open when Home Assistant or the cloud is down at the switching time. The controller's own program stays the baseline, Home Assistant handles exceptions (README, section Writing).
 
 ## 6. Open questions (to measure, read-only first)
 
