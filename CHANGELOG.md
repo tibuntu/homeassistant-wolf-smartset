@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.2.0...v0.2.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* use the authorization code of a still valid IdentityServer session ([45acb88](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/45acb88863d9391ecad6cb6cca41147ba0fe51c5))
+
 ## [0.2.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.1.0...v0.2.0) (2026-10-25)
 
 
