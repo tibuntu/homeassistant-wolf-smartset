@@ -1,12 +1,13 @@
-"""Reproductions of the open findings of the 2026-10-25 review.
+"""Reproductions of the findings of the 2026-10-25 review.
 
 See docs/reviews/2026-10-25-write-pipeline.md.
 
-Each test asserts the desired behaviour and is marked xfail(strict=True) until the finding
-is fixed. A fixed finding makes its test pass, which fails the strict xfail: remove the marker
-in the same change.
+Each test asserts the desired behaviour. An open finding is marked xfail(strict=True); a
+fixed finding makes its test pass, which fails the strict xfail: remove the marker in the
+same change. All findings are closed since 2026-10-26.
 """
 
+import json
 from unittest.mock import MagicMock
 
 from homeassistant.core import HomeAssistant
@@ -23,6 +24,8 @@ from custom_components.wolf_smartset.api import (
     WolfClient,
 )
 from custom_components.wolf_smartset.const import CONF_DRY_RUN, DOMAIN
+
+from .conftest import FIXTURES
 
 DHW_SETPOINT = 35000900000  # "Warmwassersolltemperatur eingestellt", 25-65 °C, step 1, value 50
 
@@ -46,20 +49,21 @@ async def _set_setpoint(hass: HomeAssistant, value: float) -> None:
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Finding 2: the WriteParameterValues response body is not interpreted yet; "
-    "the real response is recorded as tests/fixtures/real/write_response_0.json first, "
-    "this body is a placeholder",
-)
-async def test_write_response_reporting_an_error_is_not_ok(
+async def test_real_write_response_carries_no_state(
     hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
-    """A response that reports State 5 (Error) for the written value must not count as applied."""
+    """Finding 2, closed 2026-10-26: the portal answers `{"Dummy": 0}` to an applied write.
+
+    The body says nothing about the value, so the record stays `ok` with the body kept
+    for later comparison, and only the read-back (ADR-Writes-013) confirms the write.
+    """
     await _setup_writable(hass, mock_config_entry)
-    mock_client.write_value.return_value = {"Values": [{"ValueId": DHW_SETPOINT, "State": 5}]}
+    mock_client.write_value.return_value = json.loads(
+        (FIXTURES / "real" / "write_response_0.json").read_text(encoding="utf-8")
+    )
     await _set_setpoint(hass, 55)
-    assert mock_config_entry.runtime_data.writer.history[-1]["result"] != "ok"
+    record = mock_config_entry.runtime_data.writer.history[-1]
+    assert (record["result"], record["response"], record["confirmed"]) == ("ok", {"Dummy": 0}, None)
 
 
 LOGIN_PAGE = '<form><input type="hidden" name="__RequestVerificationToken" value="tok"/></form>'
