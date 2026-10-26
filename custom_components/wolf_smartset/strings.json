@@ -1,0 +1,285 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wolf SmartSet account",
+        "description": "Uses the same unofficial cloud interface as the SmartSet portal. Disable the core Wolf SmartSet Service integration for this account to avoid duplicate logins.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        },
+        "data_description": {
+          "username": "The username of your Wolf SmartSet account.",
+          "password": "The password of your Wolf SmartSet account (at most 30 characters)."
+        }
+      },
+      "systems": {
+        "title": "Select systems",
+        "data": {
+          "systems": "Systems"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate Wolf SmartSet",
+        "description": "Wolf SmartSet rejected the password of {username}.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid username or password.",
+      "cannot_connect": "Failed to connect to Wolf SmartSet.",
+      "portal_unavailable": "The Wolf SmartSet portal is unavailable or temporarily blocks this IP address. Try again in an hour.",
+      "password_too_long": "Wolf SmartSet accepts at most 30 characters.",
+      "no_system_selected": "Select at least one system.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This account is already configured.",
+      "no_systems": "The account has no Wolf systems.",
+      "reauth_successful": "Re-authentication was successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Poll interval",
+          "dry_run": "Dry run (do not write)",
+          "max_writes_per_hour": "Maximum writes per hour"
+        },
+        "data_description": {
+          "scan_interval": "Seconds between polls. Wolf allows at most one poll per minute.",
+          "dry_run": "While on, changes are only logged (INFO) with parameter, old and new value; nothing is sent to the heating system.",
+          "max_writes_per_hour": "Protects the controller's EEPROM against automation loops. Writes that are skipped because the value is already set do not count. Failed writes count."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "not_writable": {
+      "message": "{name} cannot be written."
+    },
+    "access_denied": {
+      "message": "The Wolf SmartSet account has no write access for {name}."
+    },
+    "invalid_option": {
+      "message": "{value} is not a valid option for {name}."
+    },
+    "out_of_range": {
+      "message": "{value} is outside the range of {name} ({min} to {max})."
+    },
+    "invalid_number": {
+      "message": "{value} is not a number for {name}."
+    },
+    "invalid_step": {
+      "message": "{value} does not match the step {step} of {name}."
+    },
+    "rate_limited": {
+      "message": "Write limit of {limit} per hour reached. Change the limit in the integration options."
+    },
+    "write_failed": {
+      "message": "Writing {name} failed: {error}"
+    },
+    "nothing_to_undo": {
+      "message": "There is no applied change to undo."
+    }
+  },
+  "issues": {
+    "throttled": {
+      "title": "Wolf SmartSet throttles {system} or blocks the login",
+      "description": "Wolf SmartSet answered several polls with throttling or empty responses, or the login is blocked after repeated failures. The integration polls less often until the portal answers again. Check that no other client logs in with this account from your network."
+    },
+    "wolflink_active": {
+      "title": "Core Wolf SmartSet Service integration is active",
+      "description": "The core Wolf SmartSet Service integration is loaded as well. Both log in from the same IP address, which can make Wolf block the address for up to an hour, including the SmartSet app. Disable the core integration if it uses the same account."
+    }
+  },
+  "entity": {
+    "button": {
+      "undo": {
+        "name": "Undo last change"
+      }
+    },
+    "number": {
+      "day_temperature_heating": {
+        "name": "Day temperature heating"
+      },
+      "day_temperature_mixer_circuit_1": {
+        "name": "Day temperature mixer circuit 1"
+      },
+      "set_dhw_temperature": {
+        "name": "Set DHW temperature"
+      },
+      "setpoint_correction": {
+        "name": "Setpoint correction"
+      }
+    },
+    "select": {
+      "program_dhw": {
+        "name": "Program DHW"
+      },
+      "program_heating": {
+        "name": "Program heating"
+      }
+    },
+    "sensor": {
+      "3_way_diverter_valve_htg_clg": {
+        "name": "3-way diverter valve HTG/CLG"
+      },
+      "3_way_diverter_valve_htg_dhw": {
+        "name": "3-way diverter valve HTG/DHW"
+      },
+      "average_outside_temperature": {
+        "name": "Average outside temperature"
+      },
+      "boiler_water_temperature": {
+        "name": "Boiler water temperature"
+      },
+      "clg_energy_amount": {
+        "name": "CLG energy amount"
+      },
+      "compressor_frequency": {
+        "name": "Compressor frequency"
+      },
+      "compressor_operating_hours": {
+        "name": "Compressor operating hours"
+      },
+      "compressor_status": {
+        "name": "Compressor status"
+      },
+      "consumption_current_month": {
+        "name": "Consumption current month"
+      },
+      "consumption_current_year": {
+        "name": "Consumption current year"
+      },
+      "consumption_previous_day": {
+        "name": "Consumption previous day"
+      },
+      "consumption_previous_year": {
+        "name": "Consumption previous year"
+      },
+      "consumption_year_before_last": {
+        "name": "Consumption year before last"
+      },
+      "current_capacity_specification_compressor": {
+        "name": "Current capacity specification compressor"
+      },
+      "current_secondary_power": {
+        "name": "Current secondary power"
+      },
+      "dhw_status": {
+        "name": "DHW status"
+      },
+      "dhw_temperature": {
+        "name": "DHW temperature"
+      },
+      "e_heating_operating_hours": {
+        "name": "E-heating operating hours"
+      },
+      "electric_booster_heater": {
+        "name": "Electric booster heater"
+      },
+      "energy_amount_dhw": {
+        "name": "Energy amount DHW"
+      },
+      "energy_amount_htg": {
+        "name": "Energy amount HTG"
+      },
+      "feed_heating_circuit_pump": {
+        "name": "Feed/heating circuit pump"
+      },
+      "flow_temperature": {
+        "name": "Flow temperature"
+      },
+      "hc_flow_rate": {
+        "name": "Heating circuit flow rate"
+      },
+      "header_temperature": {
+        "name": "Header temperature"
+      },
+      "heat_generated_current_month": {
+        "name": "Heat generated current month"
+      },
+      "heat_generated_current_year": {
+        "name": "Heat generated current year"
+      },
+      "heat_generated_previous_day": {
+        "name": "Heat generated previous day"
+      },
+      "heat_generated_previous_year": {
+        "name": "Heat generated previous year"
+      },
+      "heat_generated_year_before_last": {
+        "name": "Heat generated year before last"
+      },
+      "heating_circuit_pump": {
+        "name": "Heating circuit pump"
+      },
+      "jaz_current_year": {
+        "name": "Seasonal performance factor (JAZ) current year"
+      },
+      "jaz_previous_year": {
+        "name": "Seasonal performance factor (JAZ) previous year"
+      },
+      "jaz_year_before_last": {
+        "name": "Seasonal performance factor (JAZ) year before last"
+      },
+      "maz_current_month": {
+        "name": "Monthly performance factor (MAZ) current month"
+      },
+      "mixer_circuit_demand": {
+        "name": "Mixer circuit demand"
+      },
+      "mixer_circuit_pump": {
+        "name": "Mixer circuit pump"
+      },
+      "mixer_circuit_status": {
+        "name": "Mixer circuit status"
+      },
+      "mixer_flow_sensor_vf": {
+        "name": "Mixer flow sensor VF"
+      },
+      "mixer_motor": {
+        "name": "Mixer motor"
+      },
+      "mkp_mixer_circuit_pump": {
+        "name": "MKP mixer circuit pump"
+      },
+      "operating_mode_heater": {
+        "name": "Operating mode heater"
+      },
+      "outside_temperature": {
+        "name": "Outside temperature"
+      },
+      "power_consumption_wp_ehz": {
+        "name": "Power consumption (HP + EHZ)"
+      },
+      "return_temperature": {
+        "name": "Return temperature"
+      },
+      "room_temperature": {
+        "name": "Room temperature"
+      },
+      "set_boiler_temperature": {
+        "name": "Set boiler temperature"
+      },
+      "set_dhw_temperature_adjusted": {
+        "name": "Set DHW temperature (adjusted)"
+      },
+      "system_pressure": {
+        "name": "System pressure"
+      },
+      "taz_previous_day": {
+        "name": "Daily performance factor (TAZ) previous day"
+      }
+    },
+    "switch": {
+      "one_time_dhw_charge": {
+        "name": "One-time DHW charge"
+      }
+    }
+  }
+}

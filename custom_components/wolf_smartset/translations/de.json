@@ -101,6 +101,185 @@
       "undo": {
         "name": "Letzte Änderung rückgängig"
       }
+    },
+    "number": {
+      "day_temperature_heating": {
+        "name": "Tagtemperatur (Heizung) (Gemeinsame Einstellungen)"
+      },
+      "day_temperature_mixer_circuit_1": {
+        "name": "Tagtemperatur (Heizung) (Mischerkreis 1)"
+      },
+      "set_dhw_temperature": {
+        "name": "Warmwassersolltemperatur eingestellt"
+      },
+      "setpoint_correction": {
+        "name": "Sollwertkorrektur"
+      }
+    },
+    "select": {
+      "program_dhw": {
+        "name": "Programmwahl (Warmwasser)"
+      },
+      "program_heating": {
+        "name": "Programmwahl (Heizung)"
+      }
+    },
+    "sensor": {
+      "3_way_diverter_valve_htg_clg": {
+        "name": "3-Wege-Umschaltventil HZ/K"
+      },
+      "3_way_diverter_valve_htg_dhw": {
+        "name": "3-Wege-Umschaltventil HZ/WW"
+      },
+      "average_outside_temperature": {
+        "name": "Gemittelte Außentemperatur"
+      },
+      "boiler_water_temperature": {
+        "name": "Kesseltemperatur"
+      },
+      "clg_energy_amount": {
+        "name": "Energiemenge Kühl."
+      },
+      "compressor_frequency": {
+        "name": "Verdichterfrequenz"
+      },
+      "compressor_operating_hours": {
+        "name": "Betriebsstunden Verdichter"
+      },
+      "compressor_status": {
+        "name": "Verdichterstatus"
+      },
+      "consumption_current_month": {
+        "name": "Verbrauch aktueller Monat"
+      },
+      "consumption_current_year": {
+        "name": "Verbrauch aktuelles Jahr"
+      },
+      "consumption_previous_day": {
+        "name": "Verbrauch Vortag"
+      },
+      "consumption_previous_year": {
+        "name": "Verbrauch Vorjahr"
+      },
+      "consumption_year_before_last": {
+        "name": "Verbrauch Vorvorjahr"
+      },
+      "current_capacity_specification_compressor": {
+        "name": "Aktuelle Leistungsvorgabe Verdichter"
+      },
+      "current_secondary_power": {
+        "name": "Aktuelle Sekundärleistung"
+      },
+      "dhw_status": {
+        "name": "Warmwasser Status"
+      },
+      "dhw_temperature": {
+        "name": "Warmwassertemperatur"
+      },
+      "e_heating_operating_hours": {
+        "name": "Betriebsstunden E-Heizung"
+      },
+      "electric_booster_heater": {
+        "name": "E-Heizung"
+      },
+      "energy_amount_dhw": {
+        "name": "Energiemenge WW"
+      },
+      "energy_amount_htg": {
+        "name": "Energiemenge HZ"
+      },
+      "feed_heating_circuit_pump": {
+        "name": "Zubringer-/Heizkreispumpe"
+      },
+      "flow_temperature": {
+        "name": "Vorlauftemperatur"
+      },
+      "hc_flow_rate": {
+        "name": "Heizkreisdurchfluss"
+      },
+      "header_temperature": {
+        "name": "Sammlertemperatur"
+      },
+      "heat_generated_current_month": {
+        "name": "Erzeugte Wärmemenge aktueller Monat"
+      },
+      "heat_generated_current_year": {
+        "name": "Erzeugte Wärmemenge aktuelles Jahr"
+      },
+      "heat_generated_previous_day": {
+        "name": "Erzeugte Wärmemenge Vortag"
+      },
+      "heat_generated_previous_year": {
+        "name": "Erzeugte Wärmemenge Vorjahr"
+      },
+      "heat_generated_year_before_last": {
+        "name": "Erzeugte Wärmemenge Vorvorjahr"
+      },
+      "heating_circuit_pump": {
+        "name": "Heizkreispumpe"
+      },
+      "jaz_current_year": {
+        "name": "JAZ aktuelles Jahr"
+      },
+      "jaz_previous_year": {
+        "name": "JAZ Vorjahr"
+      },
+      "jaz_year_before_last": {
+        "name": "JAZ Vorvorjahr"
+      },
+      "maz_current_month": {
+        "name": "MAZ aktueller Monat"
+      },
+      "mixer_circuit_demand": {
+        "name": "Anforderung Mischerkreis"
+      },
+      "mixer_circuit_pump": {
+        "name": "Mischerkreispumpe"
+      },
+      "mixer_circuit_status": {
+        "name": "Mischerkreis Status"
+      },
+      "mixer_flow_sensor_vf": {
+        "name": "MI72 Analogeingang Vorlauffühler VF"
+      },
+      "mixer_motor": {
+        "name": "Mischermotor"
+      },
+      "mkp_mixer_circuit_pump": {
+        "name": "Ausgang MKP"
+      },
+      "operating_mode_heater": {
+        "name": "Betriebsart Heizgerät"
+      },
+      "outside_temperature": {
+        "name": "Außentemperatur (Heizung)"
+      },
+      "power_consumption_wp_ehz": {
+        "name": "Leistungsaufnahme (WP + EHZ)"
+      },
+      "return_temperature": {
+        "name": "Rücklauftemperatur"
+      },
+      "room_temperature": {
+        "name": "Raumtemperatur"
+      },
+      "set_boiler_temperature": {
+        "name": "Kesselsolltemperatur"
+      },
+      "set_dhw_temperature_adjusted": {
+        "name": "Warmwassersolltemperatur"
+      },
+      "system_pressure": {
+        "name": "Anlagendruck"
+      },
+      "taz_previous_day": {
+        "name": "TAZ Vortag"
+      }
+    },
+    "switch": {
+      "one_time_dhw_charge": {
+        "name": "1x Warmwasser"
+      }
     }
   }
 }
