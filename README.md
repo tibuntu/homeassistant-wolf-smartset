@@ -126,13 +126,15 @@ Expert (Fachmann) parameters are written without an expert login. Whether the co
 
 The integration never writes on its own. Writes come from your actions in the UI, from automations and from the undo button.
 
+**Automations.** Let the controller's weekly time programs do the daily switching between comfort and eco, and use Home Assistant for exceptions: "Programmwahl" to *Sparen* while nobody is home, "Zeitprogramm" 2 or 3 for holidays, "1x Warmwasser" on PV surplus, back to *Auto* afterwards. Rebuilding a schedule with automations works, but every switch is a write to the controller, and if Home Assistant or the cloud is down at the switching time the heating stays in the last written mode. The controller's own program keeps running without either.
+
 ## Removal
 
 Settings › Devices & services › Wolf SmartSet › three-dot menu › *Delete*. This removes the entry, its devices and entities. The write history `.storage/wolf_smartset.<entry_id>.history` stays behind; delete it by hand if you want it gone. Re-enable the core "Wolf SmartSet Service" integration afterwards if you still need it.
 
 ## Known limitations
 
-- Time programs, dates, times, party and holiday mode are not mapped yet ([concept](docs/time-programs.md)).
+- Time programs: the selector of the active weekly program (1, 2 or 3) is a `select`. The day schedules, dates, times, party and holiday mode are not mapped yet ([concept](docs/time-programs.md)).
 - Entity names are Wolf's German labels, the same as in the SmartSet app and the manuals. Curated parameters (see [Translation keys](#translation-keys)) are translated and show English names on non-German systems.
 - The interface is unofficial. Wolf changes the login flow several times a year; a broken login shows as "portal unavailable" until a fix is released.
 - Only one installation (Wolf CHA heat pump with BM-2 and MM1, Link home gateway) has been tested so far.
