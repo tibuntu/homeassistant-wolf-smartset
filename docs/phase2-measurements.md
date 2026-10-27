@@ -55,7 +55,7 @@ Setup: Sparfaktor, Sockeltemperatur and Vorlauftemperatur Heizkurve (bundle 6300
 
 Result: the expert bundle delivers fresh values when it is activated (`GuiIdChanged: true` on the first read after setup, reload or the daily description refresh) and then freezes; the single refresh at 03 UTC is unexplained. Bundle 1000 updates on every poll. The settings (Sparfaktor 0.5, Sockeltemperatur 29.0, Vorlauftemperatur Heizkurve 40.0) look the same either way. This confirms wolflink-write and ioBroker #242 (discovery 3.4). The two copies differ by about 0.5 K (BM-2 value versus Heizgerät value), which is not an integration issue.
 
-Consequences: expert entities show a daily snapshot, documented in the README. An applied expert write read back through a frozen bundle would be reported as `confirmed: false` (README: expert writes unproven). Open decision: re-activate expert bundles periodically, test `IsSubBundle: true` (the wolflink-write remedy), or keep the snapshot semantics.
+Consequences: expert entities show a daily snapshot, documented in the README. An applied expert write read back through a frozen bundle would be reported as `confirmed: false` (README: expert writes unproven). Decided 2026-10-27: the snapshot semantics stay. Periodic re-activation (`GuiIdChanged: true` on every expert poll) or `IsSubBundle: true` gets a one-day test only if expert writes are ever wanted.
 
 ## Next measurements (HA test run)
 
