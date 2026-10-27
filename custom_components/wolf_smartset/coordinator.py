@@ -129,6 +129,8 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
         self.client = client
         self.system = system
         self.access_level: int | None = None
+        # Gateway online flag of the last system state, None when the portal did not answer.
+        self.online: bool | None = None
         self.unreadable: set[int] = set()
         # Value ids read with State OK by the last successful poll.
         self.polled: set[int] = set()
@@ -169,7 +171,9 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
         return data
 
     async def _poll(self) -> WolfData:
+        self.online = None
         state = await self.client.get_system_state(self.system)
+        self.online = state.online
         if not state.online:
             raise UpdateFailed("The Wolf system is offline")
         self.access_level = state.access_level

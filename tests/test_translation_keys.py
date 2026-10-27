@@ -148,7 +148,10 @@ async def test_registry_keeps_entity_ids_and_gets_translation_keys(
         for p in parse_description(mock_client.get_description.return_value).parameters.values()
         if p.kind
     ]
-    assert unique_ids == {f"1234_{p.parameter_id}" for p in mapped} | {"1234_undo"}
+    assert unique_ids == {f"1234_{p.parameter_id}" for p in mapped} | {
+        "1234_undo",
+        "1234_connectivity",
+    }
     keyed = {e.unique_id for e in entries if e.translation_key and e.unique_id != "1234_undo"}
     assert keyed == {f"1234_{p.parameter_id}" for p in mapped if p.translation_key}
 

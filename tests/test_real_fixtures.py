@@ -77,7 +77,7 @@ async def test_disabled_by_default_on_new_installation(
     entries = {
         int(e.unique_id.removeprefix("1234_")): e
         for e in er.async_entries_for_config_entry(er.async_get(hass), mock_config_entry.entry_id)
-        if e.unique_id != "1234_undo"
+        if e.unique_id not in ("1234_undo", "1234_connectivity")
     }
     disabled = {
         pid for pid, e in entries.items() if e.disabled_by is er.RegistryEntryDisabler.INTEGRATION

@@ -147,6 +147,7 @@ Settings › Devices & services › Wolf SmartSet › three-dot menu › *Delete
 ## Troubleshooting
 
 - **Repair issue "throttles … or blocks the login"**: the portal answered several polls with throttling or empty responses, or the login is blocked after repeated failures (five minutes, doubling up to an hour). The integration polls less often until the portal answers again. The block also holds across Home Assistant restarts, so restarting does not speed it up. Check that no other client logs in with this account from your network.
+- **All entities unavailable**: check the *Connectivity* diagnostic sensor on the system device. `off` means the gateway is offline (power, network at home); `unavailable` means the portal itself did not answer (throttling, login, maintenance).
 - **Repair issue "core integration is active"**: disable the core integration for the same account (see Installation).
 - **Re-authentication prompt**: the portal rejected the password. Enter the current one.
 - **Diagnostics**: Settings › Devices & services › Wolf SmartSet › three-dot menu › *Download diagnostics*. The file contains the parsed parameter model, the write history and login statistics, with credentials and identifiers redacted.

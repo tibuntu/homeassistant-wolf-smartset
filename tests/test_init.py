@@ -30,7 +30,7 @@ async def _setup(hass: HomeAssistant, entry: MockConfigEntry) -> None:
     await hass.async_block_till_done()
 
 
-def _entity_id(hass: HomeAssistant, domain: str, parameter_id: int) -> str:
+def _entity_id(hass: HomeAssistant, domain: str, parameter_id: int | str) -> str:
     entity_id = er.async_get(hass).async_get_entity_id(domain, DOMAIN, f"1234_{parameter_id}")
     assert entity_id
     return entity_id
@@ -99,6 +99,24 @@ async def test_offline_makes_entities_unavailable(
     await hass.async_block_till_done()
     assert hass.states.get(_entity_id(hass, "switch", 22004200000)).state == STATE_UNAVAILABLE
     mock_client.get_values.assert_not_called()
+    assert hass.states.get(_entity_id(hass, "binary_sensor", "connectivity")).state == "off"
+
+
+async def test_connectivity_unknown_while_portal_fails(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Online after setup; unavailable when the system state request itself fails."""
+    await _setup(hass, mock_config_entry)
+    connectivity = _entity_id(hass, "binary_sensor", "connectivity")
+    assert hass.states.get(connectivity).state == "on"
+    mock_client.get_system_state.side_effect = TooManyRequests("x")
+    freezer.tick(timedelta(seconds=120))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert hass.states.get(connectivity).state == STATE_UNAVAILABLE
 
 
 async def test_throttling_backs_off(
