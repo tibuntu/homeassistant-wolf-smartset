@@ -19,6 +19,10 @@
           "systems": "Systeme"
         }
       },
+      "reconfigure": {
+        "title": "Systeme auswählen",
+        "description": "Wolf SmartSet konnte die Systeme des Kontos nicht auflisten. Sende das Formular ab, um es erneut zu versuchen."
+      },
       "reauth_confirm": {
         "title": "Wolf SmartSet erneut anmelden",
         "description": "Wolf SmartSet hat das Passwort von {username} abgelehnt.",
@@ -38,7 +42,8 @@
     "abort": {
       "already_configured": "Dieses Konto ist bereits eingerichtet.",
       "no_systems": "Das Konto hat keine Wolf-Systeme.",
-      "reauth_successful": "Die erneute Anmeldung war erfolgreich."
+      "reauth_successful": "Die erneute Anmeldung war erfolgreich.",
+      "reconfigure_successful": "Die Systemauswahl wurde aktualisiert."
     }
   },
   "options": {

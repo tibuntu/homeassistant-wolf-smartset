@@ -1,10 +1,11 @@
-"""Config flow: credentials, system selection, reauth and options."""
+"""Config flow: credentials, system selection, reauth, reconfigure and options."""
 
 from collections.abc import Mapping
 from dataclasses import asdict
 from typing import Any, override
 
 from homeassistant.config_entries import (
+    SOURCE_RECONFIGURE,
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
@@ -142,9 +143,13 @@ class WolfSmartsetConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self._create(chosen)
             errors["base"] = "no_system_selected"
         options = [SelectOptionDict(value=str(s.id), label=s.name) for s in self._systems.values()]
+        default = [o["value"] for o in options]
+        if self.source == SOURCE_RECONFIGURE:
+            stored = {str(s["id"]) for s in self._get_reconfigure_entry().data[CONF_SYSTEMS]}
+            default = [v for v in default if v in stored]
         schema = probatio.Schema(
             {
-                probatio.Required(CONF_SYSTEMS, default=[o["value"] for o in options]): (
+                probatio.Required(CONF_SYSTEMS, default=default): (
                     SelectSelector(SelectSelectorConfig(options=options, multiple=True))
                 )
             }
@@ -152,10 +157,31 @@ class WolfSmartsetConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="systems", data_schema=schema, errors=errors)
 
     def _create(self, systems: list[System]) -> ConfigFlowResult:
+        if self.source == SOURCE_RECONFIGURE:
+            return self.async_update_reload_and_abort(
+                self._get_reconfigure_entry(),
+                data_updates={CONF_SYSTEMS: [asdict(s) for s in systems]},
+            )
         return self.async_create_entry(
             title=self._credentials[CONF_USERNAME],
             data={**self._credentials, CONF_SYSTEMS: [asdict(s) for s in systems]},
         )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """List the account's systems again with the stored credentials; submit retries."""
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        systems = await _validate(
+            self.hass, entry.data[CONF_USERNAME], entry.data[CONF_PASSWORD], errors
+        )
+        if systems is not None:
+            if not systems:
+                return self.async_abort(reason="no_systems")
+            self._systems = {s.id: s for s in systems}
+            return await self.async_step_systems()
+        return self.async_show_form(step_id="reconfigure", errors=errors)
 
     async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
         """The portal rejected the stored password."""

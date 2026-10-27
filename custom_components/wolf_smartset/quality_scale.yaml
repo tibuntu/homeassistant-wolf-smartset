@@ -78,9 +78,7 @@ rules:
   icon-translations:
     status: todo
     comment: No icons.json.
-  reconfiguration-flow:
-    status: todo
-    comment: Changing the selected systems needs a new entry.
+  reconfiguration-flow: done
   repair-issues: done
   stale-devices:
     status: todo

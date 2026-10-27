@@ -1,5 +1,6 @@
-"""Config flow, reauth and options."""
+"""Config flow, reauth, reconfigure and options."""
 
+from dataclasses import asdict
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -8,7 +9,11 @@ from homeassistant.config_entries import SOURCE_USER
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import (
+    config_validation as cv,
+    device_registry as dr,
+    entity_registry as er,
+)
 import probatio
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -96,6 +101,54 @@ async def test_already_configured(
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
     result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
     assert result["reason"] == "already_configured"
+
+
+async def test_reconfigure_drops_a_system(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """Deselecting a system removes its devices; the kept system keeps its entity IDs."""
+    cabin = System(99, 98, "Cabin", 7)
+    mock_client.get_systems.return_value = [SYSTEM, cabin]
+    mock_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(
+        mock_config_entry,
+        data={**mock_config_entry.data, CONF_SYSTEMS: [asdict(SYSTEM), asdict(cabin)]},
+    )
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    entity_registry = er.async_get(hass)
+    entries = er.async_entries_for_config_entry(entity_registry, mock_config_entry.entry_id)
+    kept = {e.unique_id: e.entity_id for e in entries if e.unique_id.startswith("1234_")}
+    assert kept
+    assert any(e.unique_id.startswith("99_") for e in entries)
+
+    result = await mock_config_entry.start_reconfigure_flow(hass)
+    assert result["step_id"] == "systems"
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_SYSTEMS: ["1234"]}
+    )
+    await hass.async_block_till_done()
+
+    assert result["reason"] == "reconfigure_successful"
+    assert [s["id"] for s in mock_config_entry.data[CONF_SYSTEMS]] == [1234]
+    entries = er.async_entries_for_config_entry(entity_registry, mock_config_entry.entry_id)
+    assert {e.unique_id: e.entity_id for e in entries} == kept
+    devices = dr.async_entries_for_config_entry(dr.async_get(hass), mock_config_entry.entry_id)
+    assert devices
+    assert all(i.startswith("1234") for d in devices for _, i in d.identifiers)
+
+
+async def test_reconfigure_error_recovers(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """A failed listing shows an error; submitting retries."""
+    mock_config_entry.add_to_hass(hass)
+    mock_client.get_systems.side_effect = PortalUnavailable("x")
+    result = await mock_config_entry.start_reconfigure_flow(hass)
+    assert result["step_id"] == "reconfigure"
+    assert result["errors"] == {"base": "portal_unavailable"}
+    mock_client.get_systems.side_effect = None
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["step_id"] == "systems"
 
 
 async def test_reauth(
