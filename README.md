@@ -142,6 +142,7 @@ Settings › Devices & services › Wolf SmartSet › three-dot menu › *Delete
 - Entity names are Wolf's German labels, the same as in the SmartSet app and the manuals. Curated parameters (see [Translation keys](#translation-keys)) are translated and show English names on non-German systems.
 - The interface is unofficial. Wolf changes the login flow several times a year; a broken login shows as "portal unavailable" until a fix is released.
 - Only one installation (Wolf CHA heat pump with BM-2 and MM1, Link home gateway) has been tested so far.
+- Expert (Fachmann) values are a snapshot: the gateway delivers them when their bundle is activated (setup, reload, the daily description refresh) and then stops updating them without an expert session. User-level values update every poll ([measurement](docs/phase2-measurements.md)).
 
 ## Troubleshooting
 

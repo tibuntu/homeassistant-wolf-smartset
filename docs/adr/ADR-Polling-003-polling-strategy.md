@@ -71,7 +71,7 @@ Full requests are proven by core `wolflink`; delta polling with the cursor has s
 
 ### Risks
 
-- Expert-level values may stay frozen without an expert session. We measure this in Phase 2 and document the result instead of working around it.
+- Expert-level values may stay frozen without an expert session. Measured 2026-10-27 (`docs/phase2-measurements.md`): the expert bundle delivers values when it is activated (`GuiIdChanged: true`: setup, reload, daily description refresh) and then freezes, while bundle 1000 updates on every poll. Documented as a limitation in the README; periodic re-activation is a separate decision.
 
 ## Related Decisions
 

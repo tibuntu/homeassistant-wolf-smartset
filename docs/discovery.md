@@ -140,7 +140,7 @@ Fazit: Ein Poll-Intervall ≥ 60 s pro System, **so wenige Logins wie möglich**
 - ioBroker #242 (Maintainer-Befund 2025-01): einzelne Fachmann-Werte kommen nur, solange eine Fachmann-Session desselben Kontos aktiv ist (Portal mit PIN geöffnet oder `ExpertLogin` in der eigenen Session), danach noch ~10 min. Zusätzlich muss der erste `GetParameterValues`-Aufruf mit `LastAccess: null, GuiIdChanged: true` erfolgen. „Viele Fachmann-Werte kommen auch ohne Fachmann-Login, einige halt nicht.“ [Doku]
 - wolf-comm im Expertenmodus sendet pro Poll **eine Anfrage pro BundleId** (Wärmepumpen-Beispiel: 10 Tabs mit 7 verschiedenen Bundles); heatwrite pollt nur Bundles aktivierter Entitäten.
 
-Konsequenz: Nur Bundles abfragen, deren Parameter aktiv sind; Intervall ≥ 60 s; Verhalten eingefrorener Fachmann-Werte im Read-only-MVP messen. [Offen]
+Konsequenz: Nur Bundles abfragen, deren Parameter aktiv sind; Intervall ≥ 60 s; Verhalten eingefrorener Fachmann-Werte im Read-only-MVP messen. [Gemessen 2026-10-27, `phase2-measurements.md`: Fachmann-Bundle 6300 liefert Werte nur bei der Aktivierung mit `GuiIdChanged: true` und friert danach ein; Bundle 1000 aktualisiert bei jedem Poll.]
 
 ### 3.5 Community-Berichte (Web-Recherche)
 

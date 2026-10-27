@@ -37,13 +37,29 @@ Source: the recorder database of the owner's Home Assistant, transitions of `sen
 | 25.10. 22:12 | 22:38 | 26 min | |
 | 25.10. 22:42 | 22:52 | 10 min | |
 | 26.10. 08:52 | 10:32 | 100 min | hourly retry succeeded, discovery 16 |
-| 26.10. 12:13 | none until 19:45 | 7.5 h | `.storage/wolf_smartset.login_backoff` emptied at 12:13 by the successful login; the 0.3.0 restart at 19:12 left no gap |
+| 26.10. 12:13 | none until 27.10. 11:12 | 23 h | `.storage/wolf_smartset.login_backoff` emptied at 12:13 by the successful login; the 0.3.0 and 0.4.0 updates and two entity-enable reloads (2 s each) left no gap |
 
-Result: before 0.2.1 the integration lost the portal 17 to 100 minutes after each login; since 12:13 it survived seven hourly token renewals. That matches the hypothesis of discovery 16 (a still valid IdentityServer session answers `/connect/authorize` with the code instead of the form). It is not a proof that the fix caused it: the portal itself may have behaved differently. A further day without outage closes the question.
+Result: before 0.2.1 the integration lost the portal 17 to 100 minutes after each login; since 12:13 it survived 23 hourly token renewals. That matches the hypothesis of discovery 16 (a still valid IdentityServer session answers `/connect/authorize` with the code instead of the form). Closed 27.10.: a full day without an outage.
+
+## 2026-10-27 – Expert-level values without an expert session (recorder, read-only)
+
+Setup: Sparfaktor, Sockeltemperatur and Vorlauftemperatur Heizkurve (bundle 6300, Bedienmodul BM-2) were enabled on 26.10. 18:50 CET. They are settings and cannot show a freeze (unchanged and frozen look the same), so "Außentemperatur (Einstellungen und Anzeigen)" from the same bundle was enabled at 22:31 CET and compared with the user-level "Außentemperatur" of the Heizgerät (bundle 1000). Recorder rows per hour, times UTC.
+
+| Hour (UTC) | User copy (bundle 1000): changes, last value | Expert copy (bundle 6300): changes, last value |
+|---|---|---|
+| 26.10. 21 | 7, 10.8 | 5, 10.3 (enabled 21:31) |
+| 26.10. 22 | 1, 11.0 | 2, 10.5 (0.4.0 update, entry reload 21:41) |
+| 26.10. 23 to 27.10. 02 | 2 to 8 per hour, 11.2 to 11.8 | 0 |
+| 27.10. 03 | 5, 11.7 | 1, 11.4 |
+| 27.10. 04 to 10 | 2 to 7 per hour, 11.5 to 13.8 | 0 |
+
+Result: the expert bundle delivers fresh values when it is activated (`GuiIdChanged: true` on the first read after setup, reload or the daily description refresh) and then freezes; the single refresh at 03 UTC is unexplained. Bundle 1000 updates on every poll. The settings (Sparfaktor 0.5, Sockeltemperatur 29.0, Vorlauftemperatur Heizkurve 40.0) look the same either way. This confirms wolflink-write and ioBroker #242 (discovery 3.4). The two copies differ by about 0.5 K (BM-2 value versus Heizgerät value), which is not an integration issue.
+
+Consequences: expert entities show a daily snapshot, documented in the README. An applied expert write read back through a frozen bundle would be reported as `confirmed: false` (README: expert writes unproven). Open decision: re-activate expert bundles periodically, test `IsSubBundle: true` (the wolflink-write remedy), or keep the snapshot semantics.
 
 ## Next measurements (HA test run)
 
 - Logins per day: not logged; only the diagnostics (`login_count`, `last_login`) have them. Availability from the recorder is the proxy (section above).
 - Throttling: backoff steps and repair issues over 24 h at the default 120 s interval.
-- Expert values: enabled on 2026-10-26 (Sparfaktor, Sockeltemperatur, Vorlauftemperatur Heizkurve); the recorder shows on 2026-10-27 whether they change or freeze without an expert session.
+- Expert values: measured, see the section above. Still open: whether a write to an expert parameter is confirmed through the frozen bundle, and whether `GuiIdChanged: true` on every poll or `IsSubBundle: true` keeps the bundle fresh without throttling.
 - Parallel operation is not part of the test: core `wolflink` is disabled before the first start (ADR-Integration-000).
