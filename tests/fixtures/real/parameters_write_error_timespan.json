@@ -1,0 +1,11 @@
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "One or more validation errors occurred.",
+  "status": 400,
+  "errors": {
+    "$.WaitForResponseTimeout": [
+      "The JSON value could not be converted to System.Nullable`1[System.TimeSpan]. Path: $.WaitForResponseTimeout | LineNumber: 0 | BytePositionInLine: 244."
+    ]
+  },
+  "traceId": "00-7f4043e37164bcb8076d6b898b6b6b63-227bb18859e2228d-00"
+}
