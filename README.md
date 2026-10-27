@@ -17,6 +17,8 @@ The Wolf icon and logo ship with the integration in `brand/`; Home Assistant sho
 
 The integration asks for the username and password of your Wolf SmartSet account (the password has at most 30 characters, the portal silently truncates longer ones). It lists the systems of the account; with more than one you choose which to add. One entry per account; a second account is a second entry.
 
+To change the selection later, use *Reconfigure* in the entry's menu. Systems that stay selected keep their entity IDs and history; devices and entities of deselected systems are removed.
+
 When the portal rejects the password later, Home Assistant shows a re-authentication prompt for the entry.
 
 ## Options

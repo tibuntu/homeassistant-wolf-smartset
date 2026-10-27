@@ -55,6 +55,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> bool
         device_registry.async_get_or_create(
             config_entry_id=entry.entry_id, **system_device_info(coordinator)
         )
+    # Systems dropped by the reconfigure flow: remove their devices (and with them
+    # their entities). Identifiers are "<system id>" or "<system id>_<device>".
+    selected = {str(i) for i in coordinators}
+    for device in dr.async_entries_for_config_entry(device_registry, entry.entry_id):
+        if not any(i.split("_")[0] in selected for d, i in device.identifiers if d == DOMAIN):
+            device_registry.async_remove_device(device.id)
     _check_wolflink(hass, entry.data[CONF_USERNAME])
 
     writer = WriteManager(hass, entry)
