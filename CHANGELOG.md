@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.4.0...v0.5.0) (2026-10-27)
+
+
+### Features
+
+* gateway connectivity binary sensor ([e63cc11](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/e63cc118888ca4c3e836e6ea1ab1fb4d9cc652f1))
+* reconfigure flow for the system selection ([95c9bda](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/95c9bdabe86787696b7f5a844226afd476569ddf)), closes [#19](https://github.com/tibuntu/homeassistant-wolf-smartset/issues/19)
+
 ## [0.4.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.3.0...v0.4.0) (2026-10-26)
 
 
