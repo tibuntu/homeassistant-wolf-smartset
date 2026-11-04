@@ -30,7 +30,7 @@ The model rules of ADR-Model-002 stay as they were:
 - Parameters are keyed by `ParameterId` and keep all their occurrences.
 - Placeholders and hidden duplicates (`ValueId <= 0`, `ParameterId <= 0`, `NoDataPoint`, `ControlType` 31) are skipped.
 - **New in revision 3:** entries of the schema configuration are read as additional occurrences. They supply list items, unit and `ProtGrp`, are always read-only, and lose to tab descriptors when both describe a parameter. A schema port therefore becomes an enum sensor with display texts instead of a raw number.
-- **Writable** means the system's `AccessLevel` allows it, at least one occurrence has `IsReadOnly: false`, and that occurrence's `ControlType` is 1, 6 or 35.
+- **Writable** means the system's `AccessLevel` allows it, at least one occurrence outside an expert (Fachmann) tab has `IsReadOnly: false`, and that occurrence's `ControlType` is 1, 6 or 35. Expert tabs stay read-only (2026-11-04, HACS review): no installation has shown yet that the controller applies such a write without an expert login, and writes go to the EEPROM.
 - Platforms: `number` for writable numeric inputs with valid limits, `select` for writable lists, `sensor` (numeric, enum or diagnostic text) for everything read-only, `binary_sensor` for checkboxes. Dates, times, time programs and timed functions stay unmapped. `climate` and `water_heater` stay out of scope.
 - Known one-time actions get a `switch` through a table keyed by `ParameterId`. It currently holds only "1x Warmwasser". The table only changes the platform and never makes a parameter writable.
 

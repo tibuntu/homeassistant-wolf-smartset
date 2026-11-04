@@ -23,7 +23,7 @@ Steps 1 to 8, history, undo and services are unchanged from ADR-Writes-012. Step
 
 Every write, from `number`, `select` and `switch` entities and from the undo button, runs through one pipeline per config entry (`write.py`):
 
-1. **Writable check.** The parameter must be writable by the model rules (ADR-Model-011: `IsReadOnly` false and a writable `ControlType`) and the system's `AccessLevel` must allow it: at least 2 for user-level and 4 for expert-level parameters. Otherwise `ServiceValidationError`.
+1. **Writable check.** The parameter must be writable by the model rules (ADR-Model-011: `IsReadOnly` false and a writable `ControlType`) and the system's `AccessLevel` must allow it: at least 2. Expert-level parameters are never writable (ADR-Model-011, since 2026-11-04). Otherwise `ServiceValidationError`.
 2. **Validation.** Numbers must lie within min and max and on the step grid from the minimum. List values must be a selectable list item. Otherwise `ServiceValidationError`; nothing is sent.
 3. **Lock.** Steps 4 to 8 run under one `asyncio.Lock` per config entry. Polls do not take this lock.
 4. **No-op.** If the last known value equals the target (numerically for numbers), nothing is sent. The history records `unchanged`.

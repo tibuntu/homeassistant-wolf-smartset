@@ -45,7 +45,7 @@ async def test_entities_and_devices(
 
     registry = er.async_get(hass)
     dhw = registry.async_get(_entity_id(hass, "switch", 22004200000))
-    sparfaktor = registry.async_get(_entity_id(hass, "number", 36000600001))
+    sparfaktor = registry.async_get(_entity_id(hass, "sensor", 36000600001))
     assert dhw and not dhw.disabled
     assert sparfaktor and sparfaktor.disabled_by is er.RegistryEntryDisabler.INTEGRATION
 
