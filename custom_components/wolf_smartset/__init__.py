@@ -61,7 +61,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> bool
     for device in dr.async_entries_for_config_entry(device_registry, entry.entry_id):
         if not any(i.split("_")[0] in selected for d, i in device.identifiers if d == DOMAIN):
             device_registry.async_remove_device(device.id)
-    _check_wolflink(hass, entry.data[CONF_USERNAME])
+    _check_wolflink(hass)
 
     writer = WriteManager(hass, entry)
     await writer.async_load()
@@ -88,14 +88,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> boo
     return unloaded
 
 
-def _check_wolflink(hass: HomeAssistant, username: str) -> None:
-    """Warn when core wolflink logs in with the same account (ADR-Integration-000)."""
-    same_account = any(
-        e.state is ConfigEntryState.LOADED
-        and str(e.data.get(CONF_USERNAME, "")).lower() == username.lower()
-        for e in hass.config_entries.async_entries("wolflink")
-    )
-    if same_account:
+def _check_wolflink(hass: HomeAssistant) -> None:
+    """Warn while core wolflink is loaded (ADR-Integration-000).
+
+    Only the entry state is used; another integration's stored data is not ours to read.
+    """
+    if any(
+        e.state is ConfigEntryState.LOADED for e in hass.config_entries.async_entries("wolflink")
+    ):
         ir.async_create_issue(
             hass,
             DOMAIN,
