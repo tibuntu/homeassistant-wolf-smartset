@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP, STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
 import pytest
@@ -166,6 +166,16 @@ async def test_unload_closes_session(
     """Unload releases the portal session."""
     await _setup(hass, mock_config_entry)
     assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
+    mock_client.close.assert_awaited_once()
+
+
+async def test_stop_closes_session(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """HA stop does not unload entries; an open session froze the values after a restart."""
+    await _setup(hass, mock_config_entry)
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
+    await hass.async_block_till_done()
     mock_client.close.assert_awaited_once()
 
 
