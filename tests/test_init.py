@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, STATE_UNAVAILABLE
+from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
 import pytest
@@ -299,19 +299,20 @@ async def test_changed_description_reloads_the_entry(
 
 
 @pytest.mark.parametrize(
-    ("other", "expected"), [("User@Example.com", True), ("other@example.com", False)]
+    ("state", "expected"),
+    [(ConfigEntryState.LOADED, True), (ConfigEntryState.NOT_LOADED, False)],
 )
-async def test_wolflink_issue_only_for_the_same_account(
+async def test_wolflink_issue_while_core_is_loaded(
     hass: HomeAssistant,
     mock_client: MagicMock,
     mock_config_entry: MockConfigEntry,
-    other: str,
+    state: ConfigEntryState,
     expected: bool,
 ) -> None:
-    """Two integrations on one account double the logins; a different account does not."""
-    wolflink = MockConfigEntry(domain="wolflink", data={CONF_USERNAME: other, CONF_PASSWORD: "x"})
+    """Only the entry state counts; the core entry's account data is never read."""
+    wolflink = MockConfigEntry(domain="wolflink", data={})
     wolflink.add_to_hass(hass)
-    wolflink.mock_state(hass, ConfigEntryState.LOADED)
+    wolflink.mock_state(hass, state)
     await _setup(hass, mock_config_entry)
     assert bool(ir.async_get(hass).async_get_issue(DOMAIN, "wolflink_active")) is expected
     # The core integration is not installed; teardown must not try to unload it.
