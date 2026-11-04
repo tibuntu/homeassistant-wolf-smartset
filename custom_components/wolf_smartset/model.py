@@ -273,7 +273,9 @@ def parse_description(raw: dict[str, Any]) -> Description:
             (
                 (o, d)
                 for o, d in entries
-                if not o.read_only and o.control_type in WRITABLE_CONTROL_TYPES
+                # Expert (Fachmann) tabs stay read-only: no evidence that the controller
+                # applies those writes without an expert login, and they go to EEPROM.
+                if not o.read_only and not o.expert and o.control_type in WRITABLE_CONTROL_TYPES
             ),
             None,
         )

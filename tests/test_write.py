@@ -459,29 +459,16 @@ async def test_undo_under_dry_run_changes_nothing(
     assert "undone" not in _history(mock_config_entry)[-2]
 
 
-async def test_expert_parameter_needs_expert_access(
+async def test_read_only_account_cannot_write(
     hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
-    """AccessLevel 2 may write user parameters but not expert ones."""
-    mock_client.get_system_state.return_value = SystemState(True, 2)
-    mock_config_entry.add_to_hass(hass)
-    hass.config_entries.async_update_entry(mock_config_entry, options={CONF_DRY_RUN: False})
-    er.async_get(hass).async_get_or_create(
-        "number", DOMAIN, "1234_36000600001", config_entry=mock_config_entry, disabled_by=None
-    )  # enable Sparfaktor before setup
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
-
+    """An AccessLevel below 2 refuses user-level writes before any network call."""
+    mock_client.get_system_state.return_value = SystemState(True, 1)
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
     with pytest.raises(ServiceValidationError) as err:
-        await hass.services.async_call(
-            "number",
-            "set_value",
-            {"entity_id": _entity_id(hass, "number", 36000600001), "value": 1.5},
-            blocking=True,
-        )
+        await _set_setpoint(hass, 55)
     assert err.value.translation_key == "access_denied"
-    await _set_setpoint(hass, 55)
-    assert mock_client.write_value.await_count == 1
+    mock_client.write_value.assert_not_called()
 
 
 async def test_no_op_compares_numerically(

@@ -21,13 +21,20 @@ def test_one_time_dhw_is_a_switch(description: dict[str, Any]) -> None:
     assert p.options == {"0": "Aus", "1": "Ein"}
 
 
-def test_writable_duplicate_wins(description: dict[str, Any]) -> None:
-    """Sparfaktor is read-only under MM1 but writable under BM-2 settings (bundle 6300)."""
+def test_expert_parameters_are_read_only(description: dict[str, Any]) -> None:
+    """Sparfaktor is writable in the BM-2 expert tab (bundle 6300), but expert tabs stay
+    read-only until a real installation shows the controller applies such writes."""
     p = parse_description(description).parameters[36000600001]
     assert {o.read_only for o in p.occurrences} == {True, False}
-    assert (p.kind, p.bundle_id, p.device) == (Kind.NUMBER, 6300, "bedienmodul_bm_2_0")
-    assert (p.minimum, p.maximum, p.step) == (0.0, 10.0, 0.5)
-    assert p.expert
+    assert all(o.expert for o in p.occurrences)
+    assert (p.kind, p.writable, p.bundle_id, p.device) == (
+        Kind.SENSOR,
+        False,
+        6300,
+        "bedienmodul_bm_2_0",
+    )
+    parameters = parse_description(description).parameters.values()
+    assert not any(p.writable for p in parameters if p.expert)
 
 
 def test_overview_measurement_is_never_writable(description: dict[str, Any]) -> None:

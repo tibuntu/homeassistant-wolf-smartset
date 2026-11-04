@@ -37,9 +37,8 @@ STORAGE_VERSION = 1
 HISTORY_LIMIT = 200
 # A value read earlier than this after the write may predate the controller's update.
 CONFIRM_AFTER_SECONDS = 30
-# AccessLevel values of the portal: 2 user write, 4 expert write.
+# AccessLevel of the portal needed for user-level writes (expert parameters are read-only).
 ACCESS_USER_WRITE = 2
-ACCESS_EXPERT_WRITE = 4
 
 RESULT_OK = "ok"
 RESULT_UNCHANGED = "unchanged"
@@ -116,8 +115,7 @@ def validate(parameter: Parameter, target: str, access_level: int | None) -> Non
     """Refuse anything the description does not allow, before any network call."""
     if not parameter.writable or parameter.kind not in (Kind.NUMBER, Kind.SELECT, Kind.SWITCH):
         raise _error("not_writable", name=parameter.label)
-    required = ACCESS_EXPERT_WRITE if parameter.expert else ACCESS_USER_WRITE
-    if access_level is None or access_level < required:
+    if access_level is None or access_level < ACCESS_USER_WRITE:
         raise _error("access_denied", name=parameter.label)
     if parameter.kind is not Kind.NUMBER:
         if target not in parameter.selectable:

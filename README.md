@@ -128,7 +128,7 @@ Every write ends up in the non-volatile memory (EEPROM) of the Wolf controller. 
 - **History** of the last 200 attempts in `.storage/wolf_smartset.<entry_id>.history`, the last 50 in the diagnostics; an **Undo last change** button.
 - **Login backoff.** After a failed login the integration waits five minutes, doubling up to an hour, before it logs in again. The block is stored and survives Home Assistant restarts ([ADR-Client-015](docs/adr/ADR-Client-015-login-backoff-survives-restarts.md)). A wrong password is exempt: it opens the re-authentication prompt instead.
 
-Expert (Fachmann) parameters are written without an expert login. Whether the controller applies them is unproven; the history shows `confirmed: false` when it does not. Wrong settings, in particular expert parameters, can make the system inefficient or uncomfortable. Use at your own risk.
+Expert (Fachmann) parameters are read-only. There is no evidence from a real installation yet that the controller applies them without an expert login, and every write would end up in the EEPROM. Wrong user-level settings can still make the system inefficient or uncomfortable. Use at your own risk.
 
 The integration never writes on its own. Writes come from your actions in the UI, from automations and from the undo button.
 
@@ -153,4 +153,4 @@ Settings › Devices & services › Wolf SmartSet › three-dot menu › *Delete
 - **Repair issue "core integration is active"**: disable the core integration for the same account (see Installation).
 - **Re-authentication prompt**: the portal rejected the password. Enter the current one.
 - **Diagnostics**: Settings › Devices & services › Wolf SmartSet › three-dot menu › *Download diagnostics*. The file contains the parsed parameter model, the write history and login statistics, with credentials and identifiers redacted.
-- **A write shows "not applied"**: the controller reported another value after the write. Expert parameters may need an expert session; user-level parameters may be limited by a dependent setting in the controller.
+- **A write shows "not applied"**: the controller reported another value after the write. A dependent setting in the controller may limit the parameter.
