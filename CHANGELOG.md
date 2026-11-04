@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.6.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.5.0...v0.6.0) (2026-11-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* expert parameters that were number or select entities become sensor entities. The sensor is a new entity and starts disabled, like every expert entity. If you had enabled an expert number or select, its value disappears after the update: the old entity is marked as no longer provided, and the new sensor has to be enabled by hand under Settings > Devices & services > Wolf SmartSet > Entities.
+
+### Features
+
+* expert parameters are read-only ([63b128c](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/63b128cf9ee9f4138ac5b2dcc47df08bdb886fe6))
+
+
+### Bug Fixes
+
+* raise the wolflink repair issue from the entry state only ([0af710e](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/0af710eed2c542a05866b913869522e41a73c065))
+
 ## [0.5.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.4.0...v0.5.0) (2026-10-27)
 
 
