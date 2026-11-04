@@ -3,8 +3,13 @@
 from functools import partial
 
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import CONF_PASSWORD, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.const import (
+    CONF_PASSWORD,
+    CONF_USERNAME,
+    EVENT_HOMEASSISTANT_STOP,
+    Platform,
+)
+from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers import device_registry as dr, issue_registry as ir
 
 from .api import System, WolfClient
@@ -70,6 +75,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> bool
         entry.async_on_unload(
             coordinator.async_add_listener(partial(writer.async_check_pending, coordinator))
         )
+
+    async def _close_session(_: Event) -> None:
+        await client.close()
+
+    # HA stop does not unload entries. A session left open keeps the gateway's push
+    # bundles, and the next start reads frozen values for ~70 min until it expires.
+    entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _close_session))
     entry.runtime_data = WolfRuntimeData(http, client, coordinators, writer)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # The first refresh ran before any entity was listening; poll the enabled
