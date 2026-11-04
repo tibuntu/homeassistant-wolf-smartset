@@ -1,15 +1,33 @@
 # Wolf SmartSet (read/write) for Home Assistant
 
+[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/tibuntu/homeassistant-wolf-smartset)](https://github.com/tibuntu/homeassistant-wolf-smartset/releases/latest)
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=tibuntu&repository=homeassistant-wolf-smartset&category=integration)
+
 Custom integration for Wolf heating systems connected to the Wolf SmartSet cloud. It uses the same unofficial interface as the SmartSet portal and app. It reads every parameter of the system and can write settings such as the DHW setpoint, the operating mode or "1x Warmwasser". Writing is off until you switch off the dry run.
 
 Wolf does not support third-party access. Design decisions are recorded in [`docs/adr/`](docs/adr/).
 
 ## Installation
 
-1. In HACS open *Integrations*, then the three-dot menu, then *Custom repositories*. Add `https://github.com/tibuntu/homeassistant-wolf-smartset` with category *Integration*.
-2. Install "Wolf SmartSet (read/write)" and restart Home Assistant.
-3. If the core integration "Wolf SmartSet Service" (`wolflink`) is set up for the same account, disable it first: Settings › Devices & services › Wolf SmartSet Service › three-dot menu › *Disable*. Two integrations on one account log in from the same IP address, and Wolf blocks the address for up to an hour after too many logins. The block also hits the SmartSet app.
-4. Settings › Devices & services › *Add integration* › "Wolf SmartSet (read/write)".
+### HACS (recommended)
+
+1. Make sure [HACS](https://hacs.xyz/) is installed.
+2. Search for "Wolf SmartSet (read/write)" in HACS and download it, or use the button above.
+3. Restart Home Assistant.
+
+### Manual installation
+
+1. Download `wolf_smartset.zip` from the [latest release](https://github.com/tibuntu/homeassistant-wolf-smartset/releases/latest).
+2. Extract it into `config/custom_components/wolf_smartset/`.
+3. Restart Home Assistant.
+
+### Add the integration
+
+1. If the core integration "Wolf SmartSet Service" (`wolflink`) is set up for the same account, disable it first: Settings › Devices & services › Wolf SmartSet Service › three-dot menu › *Disable*. Two integrations on one account log in from the same IP address, and Wolf blocks the address for up to an hour after too many logins. The block also hits the SmartSet app.
+2. Settings › Devices & services › *Add integration* › "Wolf SmartSet (read/write)".
 
 The Wolf icon and logo ship with the integration in `brand/`; Home Assistant shows local brand images since 2026.3. [home-assistant/brands](https://github.com/home-assistant/brands) no longer takes custom integrations, and the images are the Wolf set from that repository (`custom_integrations/wolf`).
 
