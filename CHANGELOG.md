@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.6.0...v0.6.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* activate the bundle on every poll ([b65d771](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/b65d771816c1d4f09d51a007f2e10fa45692249f))
+* close the portal session when Home Assistant stops ([1da2baa](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/1da2baaeb628560f7e6ef8b2f0ee5525f59481d2))
+
 ## [0.6.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.5.0...v0.6.0) (2026-11-04)
 
 
