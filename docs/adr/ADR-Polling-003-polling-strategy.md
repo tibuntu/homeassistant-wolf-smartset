@@ -27,7 +27,7 @@ We will use one `DataUpdateCoordinator` per SmartSet system. All coordinators of
 
 - **Interval:** default 120 s, configurable in the options flow, minimum 60 s.
 - **What is fetched:** each entity registers its `ParameterId` as coordinator context. Each cycle requests only the bundles that contain active parameters, and within a bundle only those `ValueId`s. Bundle IDs come exclusively from the current description.
-- **Request shape:** full requests (`LastAccess: null`, `GuiIdChanged: true` on the first request per bundle after a description load, `false` afterwards). Delta polling with the `LastAccess` cursor stays out of the MVP; we measure whether it is worth it in Phase 2.
+- **Request shape:** full requests (`LastAccess: null`, `GuiIdChanged: true` on every request; until 2026-11-05 only on the first request per bundle after a description load, which froze values after restarts, see Risks). Delta polling with the `LastAccess` cursor stays out of the MVP; we measure whether it is worth it in Phase 2.
 - **Online check:** one system-state request per cycle. When the system is offline, entities become unavailable and value requests are skipped.
 - **Description reload:** at setup, after a read error that hints at changed IDs, and once per day. The current values embedded in the description seed the coordinator data, so entities have values right after setup.
 - **Backoff:** on `ToManyRequests`, portal unavailable, HTTP 429 or a cycle where every value request comes back empty, the coordinator raises `UpdateFailed` and doubles its interval up to one hour. A successful cycle restores the configured interval. After three consecutive backoff steps we raise a repair issue.
@@ -71,7 +71,7 @@ Full requests are proven by core `wolflink`; delta polling with the cursor has s
 
 ### Risks
 
-- Expert-level values may stay frozen without an expert session. Measured 2026-10-27 (`docs/phase2-measurements.md`): the expert bundle delivers values when it is activated (`GuiIdChanged: true`: setup, reload, daily description refresh) and then freezes, while bundle 1000 updates on every poll. Documented as a limitation in the README; periodic re-activation is a separate decision.
+- Expert-level values may stay frozen without an expert session. Measured 2026-10-27 (`docs/phase2-measurements.md`): the expert bundle delivers values when it is activated (`GuiIdChanged: true`: setup, reload, daily description refresh) and then freezes, while bundle 1000 updates on every poll. Update 2026-11-05: after many HA restarts bundle 1000 froze the same way for about 70 minutes. Since then every request re-activates its bundle; both bundles update every poll and no throttling was seen in the first 15 hours.
 
 ## Related Decisions
 

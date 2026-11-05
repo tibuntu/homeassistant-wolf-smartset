@@ -57,9 +57,15 @@ Result: the expert bundle delivers fresh values when it is activated (`GuiIdChan
 
 Consequences: expert entities show a daily snapshot, documented in the README. An applied expert write read back through a frozen bundle would be reported as `confirmed: false` (README: expert writes unproven). Decided 2026-10-27: the snapshot semantics stay. Periodic re-activation (`GuiIdChanged: true` on every expert poll) or `IsSubBundle: true` gets a one-day test only if expert writes are ever wanted.
 
+## 2026-11-04/05 – User-level values frozen after restarts (recorder, read-only)
+
+Symptom: Warmwassertemperatur "dropped" from 58.2 to 25.5 °C. HA had restarted at 15:49; every Wolf entity kept the values of the activating read for 70 minutes while polls succeeded (`success: True`, debug log) and stayed available. Same 70-minute freeze after 9 restarts between 26.10. and 04.11., not after every restart.
+
+Closing the portal session on HA stop (`CloseSystem`) did not help: the next restart froze again right after the second read. With `GuiIdChanged: true` on every read, the restarts at 04.11. 19:44 and 05.11. 06:19 updated every poll, no gap over 10 minutes and no throttling warning in 15 hours. The expert copy of Außentemperatur (bundle 6300) now updates as often as the user-level copy (94 vs. 93 changes), so the snapshot semantics of 27.10. no longer apply.
+
 ## Next measurements (HA test run)
 
 - Logins per day: not logged; only the diagnostics (`login_count`, `last_login`) have them. Availability from the recorder is the proxy (section above).
 - Throttling: backoff steps and repair issues over 24 h at the default 120 s interval.
-- Expert values: measured, see the section above. Still open: whether a write to an expert parameter is confirmed through the frozen bundle, and whether `GuiIdChanged: true` on every poll or `IsSubBundle: true` keeps the bundle fresh without throttling.
+- Expert values: measured, see the section above. `GuiIdChanged: true` on every poll keeps the bundle fresh (section 2026-11-04/05). Still open: whether a write to an expert parameter is confirmed.
 - Parallel operation is not part of the test: core `wolflink` is disabled before the first start (ADR-Integration-000).
