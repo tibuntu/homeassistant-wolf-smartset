@@ -135,7 +135,6 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
         # Value ids read with State OK by the last successful poll.
         self.polled: set[int] = set()
         self.backoff_steps = 0
-        self._started_bundles: set[int] = set()
         self._description_loaded = dt_util.utcnow()
 
     @override
@@ -205,9 +204,10 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
         return data
 
     async def _read_bundle(self, bundle_id: int, value_ids: list[int]) -> list[Value]:
-        first = bundle_id not in self._started_bundles
         try:
-            values = await self.client.get_values(self.system, bundle_id, value_ids, first=first)
+            # Every read re-activates the bundle: after a restart the gateway sometimes
+            # answers later reads with the values of the activating read (~70 min).
+            values = await self.client.get_values(self.system, bundle_id, value_ids, first=True)
         except ParameterReadError:
             if len(value_ids) == 1:
                 LOGGER.warning(
@@ -221,7 +221,6 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
             for value_id in value_ids:
                 isolated += await self._read_bundle(bundle_id, [value_id])
             return isolated
-        self._started_bundles.add(bundle_id)
         return values
 
     async def _refresh_description(self) -> None:
@@ -239,7 +238,6 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
             LOGGER.info("Parameter description of %s changed, reloading", self.system.name)
             self.hass.config_entries.async_schedule_reload(self.config_entry.entry_id)
         self.description = new
-        self._started_bundles.clear()
 
     @property
     def _issue_id(self) -> str:

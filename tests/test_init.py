@@ -270,6 +270,23 @@ async def test_unreadable_value_is_isolated(
     assert all(bad not in call.args[2] for call in mock_client.get_values.call_args_list)
 
 
+async def test_every_poll_activates_the_bundle(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Later reads must activate the bundle too; without it values froze after a restart."""
+    await _setup(hass, mock_config_entry)
+    mock_client.get_values.reset_mock()
+    freezer.tick(timedelta(seconds=120))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    calls = mock_client.get_values.call_args_list
+    assert calls
+    assert all(call.kwargs["first"] for call in calls)
+
+
 async def test_description_is_reloaded_daily(
     hass: HomeAssistant,
     mock_client: MagicMock,
