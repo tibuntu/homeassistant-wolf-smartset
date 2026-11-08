@@ -10,7 +10,7 @@ license = "Apache-2.0"
 dev = [
     # Pins homeassistant, pytest, pytest-asyncio and pytest-cov
     "pytest-homeassistant-custom-component==0.13.375",
-    "ruff==0.17.3",
+    "ruff==0.17.4",
     "mypy==2.4.1",
     "bandit[toml]==1.9.4",
     "pre-commit==4.7.0",
