@@ -25,7 +25,6 @@ import getpass
 import json
 import os
 from pathlib import Path
-import re
 import sys
 from typing import Any
 
@@ -35,82 +34,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from custom_components.wolf_smartset.api import WolfClient
 from custom_components.wolf_smartset.model import parse_description
-
-REDACTED = "**REDACTED**"
-# IDs are replaced consistently so the fixtures stay usable.
-FAKE_IDS = {"Id": 1234, "SystemId": 1234, "GatewayId": 5678, "SystemShareId": 9012}
-SECRET_KEYS = {
-    "Name", "Description", "Comment", "ContactInformation", "Email", "UserName",
-    "Firstname", "Surname", "Street", "City", "ZipCode", "Phone", "SerialNumber",
-    "GatewayUsername",
-}  # fmt: skip
-SECRET_PARAMETER = re.compile(
-    r"seriennummer|serial|mac|ip adresse|gateway|dns|subnetz|anlagenname|herstell",
-    re.IGNORECASE,
+from custom_components.wolf_smartset.redact import (  # noqa: F401 (REDACTED for the tests)
+    REDACTED,
+    redact_description,
+    redact_ids,
+    redact_values,
+    secret_value_ids,
 )
-# text, IP, URL, password inputs; dates, times and day switch times (presence patterns)
-SECRET_CONTROL_TYPES = {9, 10, 14, 20, 21, 22, 23}
-
-
-def redact_ids(data: Any) -> Any:
-    """Replace system/gateway IDs and personal fields of non-descriptor objects."""
-    if isinstance(data, list):
-        return [redact_ids(item) for item in data]
-    if not isinstance(data, dict):
-        return data
-    return {
-        key: FAKE_IDS[key]
-        if key in FAKE_IDS and value is not None
-        else REDACTED
-        if key in SECRET_KEYS and value
-        else redact_ids(value)
-        for key, value in data.items()
-    }
-
-
-def redact_description(data: Any) -> Any:
-    """Blank values of identifying parameters (serials, MAC, IP, system name)."""
-    if isinstance(data, list):
-        return [redact_description(item) for item in data]
-    if not isinstance(data, dict):
-        return data
-    result = {key: redact_description(value) for key, value in data.items()}
-    if "ValueId" in data and (
-        data.get("ControlType") in SECRET_CONTROL_TYPES
-        or SECRET_PARAMETER.search(str(data.get("Name") or ""))
-    ):
-        result["Value"] = REDACTED if data.get("Value") is not None else None
-    return result
-
-
-def secret_value_ids(description: Any) -> set[int]:
-    """ValueIds whose values identify the installation (serials, addresses, dates, times)."""
-    found: set[int] = set()
-
-    def walk(node: Any) -> None:
-        if isinstance(node, list):
-            for item in node:
-                walk(item)
-        elif isinstance(node, dict):
-            if "ValueId" in node and (
-                node.get("ControlType") in SECRET_CONTROL_TYPES
-                or SECRET_PARAMETER.search(str(node.get("Name") or ""))
-            ):
-                found.add(node["ValueId"])
-            for value in node.values():
-                walk(value)
-
-    walk(description)
-    return found
-
-
-def redact_values(values: dict[str, Any], secret_ids: set[int]) -> dict[str, Any]:
-    """Redact identifiers and blank the values of secret parameters."""
-    result = redact_ids(values)
-    for item in result.get("Values") or []:
-        if item.get("ValueId") in secret_ids and item.get("Value") is not None:
-            item["Value"] = REDACTED
-    return result
 
 
 # Wolf's fault texts and codes ("Description", "ErrorCode") describe the fault, not the
