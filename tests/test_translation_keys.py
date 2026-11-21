@@ -3,8 +3,9 @@
 import json
 import re
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -159,3 +160,68 @@ async def test_registry_keeps_entity_ids_and_gets_translation_keys(
     assert exhaust
     entry = registry.async_get(exhaust)
     assert entry and entry.translation_key is None and entry.original_name == "Ablufttemperatur"
+
+
+# The eight curated controls of brief 05 (ADR-Model-017).
+PRIMARY_CONTROLS = {
+    "number": {
+        "set_dhw_temperature",
+        "day_temperature_heating",
+        "day_temperature_mixer_circuit_1",
+        "setpoint_correction",
+    },
+    "select": {"program_heating", "program_dhw", "time_program_heating", "time_program_dhw"},
+}
+
+
+async def test_keyed_controls_lose_config_category_from_earlier_release(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """Registry entries stored with CONFIG end up without a category; IDs stay."""
+    registry = er.async_get(hass)
+    mock_config_entry.add_to_hass(hass)
+    old = [
+        registry.async_get_or_create(
+            platform,
+            DOMAIN,
+            f"1234_{parameter_id}",
+            suggested_object_id=f"old_{key}",
+            config_entry=mock_config_entry,
+            entity_category=EntityCategory.CONFIG,
+        )
+        for platform in PRIMARY_CONTROLS
+        for parameter_id, key in TRANSLATION_KEYS[platform].items()
+    ]
+    assert {(e.domain, e.entity_id.removeprefix(f"{e.domain}.old_")) for e in old} == {
+        (platform, key) for platform, keys in PRIMARY_CONTROLS.items() for key in keys
+    }
+    assert all(e.entity_category is EntityCategory.CONFIG for e in old)
+
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    for before in old:
+        after = registry.async_get(before.entity_id)
+        assert after and after.unique_id == before.unique_id, before.entity_id
+        assert after.entity_category is None, before.entity_id
+
+
+async def test_writable_parameter_without_key_stays_config(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """A writable number outside the curated table keeps EntityCategory.CONFIG."""
+    numbers = {k: v for k, v in TRANSLATION_KEYS["number"].items() if v != "setpoint_correction"}
+    with patch.dict(TRANSLATION_KEYS, {"number": numbers}):
+        mock_config_entry.add_to_hass(hass)
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+    registry = er.async_get(hass)
+    unkeyed_id = registry.async_get_entity_id("number", DOMAIN, "1234_36002900001")
+    keyed_id = registry.async_get_entity_id("number", DOMAIN, "1234_36006800001")
+    assert unkeyed_id and keyed_id
+    unkeyed = registry.async_get(unkeyed_id)
+    keyed = registry.async_get(keyed_id)
+    assert unkeyed and unkeyed.translation_key is None
+    assert unkeyed.entity_category is EntityCategory.CONFIG
+    assert keyed and keyed.entity_category is None
