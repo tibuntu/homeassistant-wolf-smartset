@@ -1,0 +1,61 @@
+{
+  "entity": {
+    "sensor": {
+      "operating_mode_heater": {"default": "mdi:heat-pump"},
+      "compressor_status": {"default": "mdi:heat-pump-outline"},
+      "current_capacity_specification_compressor": {"default": "mdi:gauge"},
+      "3_way_diverter_valve_htg_dhw": {"default": "mdi:valve"},
+      "3_way_diverter_valve_htg_clg": {"default": "mdi:valve"},
+      "electric_booster_heater": {"default": "mdi:heating-coil"},
+      "dhw_status": {"default": "mdi:water-boiler"},
+      "mixer_circuit_status": {"default": "mdi:radiator"},
+      "mixer_circuit_demand": {"default": "mdi:radiator"},
+      "mkp_mixer_circuit_pump": {"default": "mdi:pump"},
+      "mixer_circuit_pump": {"default": "mdi:pump"},
+      "mixer_motor": {"default": "mdi:valve"},
+      "heating_circuit_pump": {"default": "mdi:pump"},
+      "feed_heating_circuit_pump": {"default": "mdi:pump"},
+      "jaz_current_year": {"default": "mdi:chart-line"},
+      "jaz_previous_year": {"default": "mdi:chart-line"},
+      "jaz_year_before_last": {"default": "mdi:chart-line"},
+      "maz_current_month": {"default": "mdi:chart-line"},
+      "taz_previous_day": {"default": "mdi:chart-line"}
+    },
+    "number": {
+      "setpoint_correction": {"default": "mdi:thermometer-plus"}
+    },
+    "select": {
+      "program_heating": {"default": "mdi:radiator"},
+      "program_dhw": {"default": "mdi:water-boiler"},
+      "time_program_heating": {"default": "mdi:calendar-clock"},
+      "time_program_dhw": {"default": "mdi:calendar-clock"}
+    },
+    "switch": {
+      "one_time_dhw_charge": {
+        "default": "mdi:water-boiler-off",
+        "state": {"on": "mdi:water-boiler", "off": "mdi:water-boiler-off"}
+      }
+    },
+    "button": {
+      "undo": {"default": "mdi:undo"}
+    },
+    "event": {
+      "write": {
+        "default": "mdi:pencil-circle",
+        "state_attributes": {
+          "event_type": {
+            "default": "mdi:pencil-circle",
+            "state": {
+              "ok": "mdi:check-circle",
+              "confirmed": "mdi:check-all",
+              "not_applied": "mdi:alert-circle-outline",
+              "dry_run": "mdi:test-tube",
+              "rate_limited": "mdi:timer-sand",
+              "error": "mdi:alert-circle"
+            }
+          }
+        }
+      }
+    }
+  }
+}
