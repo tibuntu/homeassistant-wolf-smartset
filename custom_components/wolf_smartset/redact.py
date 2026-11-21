@@ -13,7 +13,7 @@ REDACTED = "**REDACTED**"
 # IDs are replaced consistently so the fixtures stay usable.
 FAKE_IDS = {"Id": 1234, "SystemId": 1234, "GatewayId": 5678, "SystemShareId": 9012}
 SECRET_KEYS = {
-    "Name", "Description", "Comment", "ContactInformation", "Email", "UserName",
+    "Name", "SystemName", "Description", "Comment", "ContactInformation", "Email", "UserName",
     "Firstname", "Surname", "Street", "City", "ZipCode", "Phone", "SerialNumber",
     "GatewayUsername", "SessionId", "MacAddress", "IpAddress",
 }  # fmt: skip
