@@ -152,6 +152,61 @@ The integration never writes on its own. Writes come from your actions in the UI
 
 **Automations.** Let the controller's weekly time programs do the daily switching between comfort and eco, and use Home Assistant for exceptions: "Programmwahl" to *Sparen* while nobody is home, "Zeitprogramm" 2 or 3 for holidays, "1x Warmwasser" on PV surplus, back to *Auto* afterwards. Rebuilding a schedule with automations works, but every switch is a write to the controller, and if Home Assistant or the cloud is down at the switching time the heating stays in the last written mode. The controller's own program keeps running without either.
 
+## Examples
+
+### Electricity use, Energy dashboard and COP without an electricity meter
+
+Without an S0 electricity meter the portal reports "Verbrauch", "JAZ", "TAZ" and "MAZ" as 0. The live power sensor "Leistungsaufnahme (WP + EHZ)" (`power_consumption_wp_ehz`) still carries real values, so Home Assistant can integrate it into kWh.
+
+**Accuracy.** The result is an estimate of ±15 to 20 %: the controller reports power in 0.1 kW steps and Home Assistant samples it at the poll interval. As a check, integrating "Aktuelle Sekundärleistung" the same way gave 16 % more heat than Wolf's own counter over 14 days. See the [measurement](docs/phase2-measurements.md#2026-11-20--electricity-estimate-and-cop-without-an-s0-meter-recorder-read-only). Do not use it for billing.
+
+Entity IDs differ per installation: replace the `sensor.wolf_*` IDs below with the IDs of your entities (find them by the Wolf label or the [translation key](#translation-keys)). Put the YAML into `configuration.yaml` (or a package) and restart. The "Integral" and "Utility Meter" helpers under Settings › Devices & services › Helpers give the same result without YAML.
+
+**1. Electricity estimate** from "Leistungsaufnahme (WP + EHZ)" (`power_consumption_wp_ehz`, kW):
+
+```yaml
+sensor:
+  - platform: integration
+    source: sensor.wolf_power_consumption_hp_ehz
+    name: Wolf electricity estimate
+    unique_id: wolf_electricity_estimate
+    unit_time: h
+    round: 3
+    max_sub_interval: "00:10:00"
+```
+
+The source is in kW and the time unit is hours, so the result is in kWh. `max_sub_interval` keeps the sum growing while the power value does not change.
+
+**2. Energy dashboard.** Settings › Dashboards › Energy › *Individual devices* › *Add device*, then pick `sensor.wolf_electricity_estimate`. Home Assistant 2026.10 accepts an individual device only with an energy sensor (`stat_consumption`); a power sensor alone is not enough, which is why step 1 comes first. Optionally the device entry also takes the power sensor for live power.
+
+**3. COP** = heat from "Energiemenge HZ" (`energy_amount_htg`) plus "Energiemenge WW" (`energy_amount_dhw`) divided by the estimated electricity over the same period. Two daily utility meters take the heat difference and the electricity, a template sensor divides them:
+
+```yaml
+utility_meter:
+  wolf_electricity_daily:
+    source: sensor.wolf_electricity_estimate
+    cycle: daily
+  wolf_heat_htg_daily:
+    source: sensor.wolf_energy_amount_htg
+    cycle: daily
+  wolf_heat_dhw_daily:
+    source: sensor.wolf_energy_amount_dhw
+    cycle: daily
+
+template:
+  - sensor:
+      - name: Wolf COP (daily)
+        unique_id: wolf_cop_daily
+        state_class: measurement
+        availability: "{{ states('sensor.wolf_electricity_daily') | float(0) > 0.5 }}"
+        state: >
+          {{ ((states('sensor.wolf_heat_htg_daily') | float(0)
+               + states('sensor.wolf_heat_dhw_daily') | float(0))
+              / states('sensor.wolf_electricity_daily') | float(1)) | round(2) }}
+```
+
+The sensor is unavailable until the day's estimate passes 0.5 kWh. A daily value is noisy; use `cycle: weekly` or `monthly` for a steadier number. In the 14-day measurement the COP was about 5.4.
+
 ## Removal
 
 Settings › Devices & services › Wolf SmartSet › three-dot menu › *Delete*. This removes the entry, its devices and entities. The write history `.storage/wolf_smartset.<entry_id>.history` stays behind; delete it by hand if you want it gone. Re-enable the core "Wolf SmartSet Service" integration afterwards if you still need it.
