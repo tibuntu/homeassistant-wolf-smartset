@@ -143,7 +143,7 @@ Every write ends up in the non-volatile memory (EEPROM) of the Wolf controller. 
 - **Rate limit**, 20 writes per hour by default, configurable.
 - **One write at a time.**
 - **Optimistic state with confirmation.** The new value shows immediately. The first poll at least 30 s after the write confirms it (`confirmed: true` in the history) or restores the value the controller reports (`confirmed: false`, a warning in the log).
-- **Write result event.** The *Write result* event entity on the system device fires once per attempt: `ok` (sent to the portal), `confirmed`, `not_applied`, `dry_run`, `rate_limited` or `error`, with the attributes `label`, `parameter_id`, `old`, `new`, `source` (`entity` or `undo`) and `error` when present. A value that is already set fires nothing. Every event shows in the logbook and can trigger an automation.
+- **Write result event.** The *Write result* event entity on the system device fires for every attempt: `dry_run`, `rate_limited` or `error` once; a real write fires `ok` when it is sent to the portal and later `confirmed` or `not_applied` when the next poll checks it. Each event has the attributes `label`, `parameter_id`, `old`, `new`, `source` (`entity` or `undo`) and `error` when present. A value that is already set fires nothing. Every event shows in the logbook and can trigger an automation.
 - **History** of the last 200 attempts in `.storage/wolf_smartset.<entry_id>.history`, the last 50 in the diagnostics; an **Undo last change** button.
 - **Login backoff.** After a failed login the integration waits five minutes, doubling up to an hour, before it logs in again. The block is stored and survives Home Assistant restarts ([ADR-Client-015](docs/adr/ADR-Client-015-login-backoff-survives-restarts.md)). A wrong password is exempt: it opens the re-authentication prompt instead.
 
@@ -151,7 +151,7 @@ Expert (Fachmann) parameters are read-only. There is no evidence from a real ins
 
 The integration never writes on its own. Writes come from your actions in the UI, from automations and from the undo button.
 
-Example: notify when the controller did not apply a write (replace the entity ID with yours):
+Example: notify when the controller did not apply a write (replace the entity ID with yours). `not_from` keeps a restart or reload, which restores the last event, from sending the notification again:
 
 ```yaml
 automation:
@@ -159,6 +159,7 @@ automation:
     triggers:
       - trigger: state
         entity_id: event.home_write_result
+        not_from: [unavailable, unknown]
     conditions:
       - condition: state
         entity_id: event.home_write_result
