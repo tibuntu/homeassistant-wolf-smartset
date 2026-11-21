@@ -7,7 +7,8 @@ from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 
-from .coordinator import WolfConfigEntry
+from .coordinator import WolfConfigEntry, WolfSystemCoordinator
+from .redact import REDACTED, redact_description, secret_value_ids
 
 TO_REDACT = {CONF_USERNAME, CONF_PASSWORD, "id", "gateway_id", "name", "share_id", "title"}
 
@@ -15,7 +16,7 @@ TO_REDACT = {CONF_USERNAME, CONF_PASSWORD, "id", "gateway_id", "name", "share_id
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: WolfConfigEntry
 ) -> dict[str, Any]:
-    """Login statistics and the parsed parameter model per system, no values."""
+    """Login statistics, write history, and per system the model, description and values."""
     runtime = entry.runtime_data
     return {
         "entry": async_redact_data(
@@ -61,7 +62,19 @@ async def async_get_config_entry_diagnostics(
                     }
                     for p in c.description.parameters.values()
                 ],
+                # Fixture-grade: tests/fixtures/real/description_<n>.json and values.
+                "description": redact_description(c.raw_description),
+                "values": _values(c),
             }
             for c in runtime.coordinators.values()
         ],
+    }
+
+
+def _values(coordinator: WolfSystemCoordinator) -> dict[int, str | None]:
+    """Current values by ValueId; serials, addresses, dates and times blanked."""
+    secret = secret_value_ids(coordinator.raw_description)
+    return {
+        value_id: REDACTED if value_id in secret and value is not None else value
+        for value_id, value in (coordinator.data or {}).items()
     }
