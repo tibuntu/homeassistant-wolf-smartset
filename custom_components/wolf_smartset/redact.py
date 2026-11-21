@@ -15,13 +15,16 @@ FAKE_IDS = {"Id": 1234, "SystemId": 1234, "GatewayId": 5678, "SystemShareId": 90
 SECRET_KEYS = {
     "Name", "Description", "Comment", "ContactInformation", "Email", "UserName",
     "Firstname", "Surname", "Street", "City", "ZipCode", "Phone", "SerialNumber",
-    "GatewayUsername", "SessionId",
+    "GatewayUsername", "SessionId", "MacAddress", "IpAddress",
 }  # fmt: skip
-ID_KEYS = frozenset(FAKE_IDS) | SECRET_KEYS
+# Keys are matched case-insensitively: the portal mixes PascalCase and camelCase DTOs.
+_FAKE = {key.casefold(): value for key, value in FAKE_IDS.items()}
+_SECRET = frozenset(key.casefold() for key in SECRET_KEYS)
+_ID = frozenset(_FAKE) | _SECRET
 # Parameter, menu and option texts under MenuItems, needed to parse the description again.
-DESCRIPTOR_TEXTS = frozenset({"Name", "Description"})
+DESCRIPTOR_TEXTS = frozenset({"name", "description"})
 SECRET_PARAMETER = re.compile(
-    r"seriennummer|serial|mac|ip adresse|gateway|dns|subnetz|anlagenname|herstell",
+    r"seriennummer|seriennr|serial|mac|ip[ -]?adresse|gateway|dns|subnetz|anlagenname|herstell",
     re.IGNORECASE,
 )
 # text, IP, URL, password inputs; dates, times and day switch times (presence patterns)
@@ -36,37 +39,45 @@ def _is_secret(node: dict[str, Any]) -> bool:
     )
 
 
-def _redact(data: Any, keep: frozenset[str], blank_values: bool) -> Any:
+def _redact(data: Any, keep: frozenset[str], secret: set[int] | None) -> Any:
+    """Fake IDs, blank personal keys; with secret, blank Value of every node with such a ValueId."""
     if isinstance(data, list):
-        return [_redact(item, keep, blank_values) for item in data]
+        return [_redact(item, keep, secret) for item in data]
     if not isinstance(data, dict):
         return data
-    result = {
-        key: FAKE_IDS[key]
-        if key in FAKE_IDS and value is not None
-        else REDACTED
-        if key in SECRET_KEYS and key not in keep and value
-        else _redact(value, keep, blank_values)
-        for key, value in data.items()
-    }
-    if blank_values and _is_secret(data):
-        result["Value"] = REDACTED if data.get("Value") is not None else None
+    result: dict[str, Any] = {}
+    for key, value in data.items():
+        folded = key.casefold()
+        if folded in _FAKE and value is not None:
+            result[key] = _FAKE[folded]
+        elif folded in _SECRET and folded not in keep and value:
+            result[key] = REDACTED
+        else:
+            result[key] = _redact(value, keep, secret)
+    if secret is not None:
+        if data.get("ValueId") in secret:
+            result["Value"] = REDACTED if data.get("Value") is not None else None
+        # A group title the user can edit is free text ("Wohnung Mueller").
+        if data.get("IsTitleEditable") and data.get("GroupName"):
+            result["GroupName"] = REDACTED
     return result
 
 
 def redact_ids(data: Any) -> Any:
     """Replace system/gateway IDs and personal fields of non-descriptor objects."""
-    return _redact(data, frozenset(), blank_values=False)
+    return _redact(data, frozenset(), None)
 
 
 def redact_description(data: dict[str, Any]) -> dict[str, Any]:
     """Blank identifying values (serials, MAC, IP, system name, dates, times) and IDs.
 
-    Descriptor texts under MenuItems stay, everything else gets redact_ids.
+    A secret ValueId is blanked in every descriptor that carries it, hidden duplicates
+    included. Descriptor texts under MenuItems stay, everything else gets redact_ids.
     """
-    rest = _redact({k: v for k, v in data.items() if k != "MenuItems"}, frozenset(), True)
+    secret = secret_value_ids(data)
+    rest = _redact({k: v for k, v in data.items() if k != "MenuItems"}, frozenset(), secret)
     return {
-        k: _redact(v, DESCRIPTOR_TEXTS, True) if k == "MenuItems" else rest[k]
+        k: _redact(v, DESCRIPTOR_TEXTS, secret) if k == "MenuItems" else rest[k]
         for k, v in data.items()
     }
 
@@ -116,9 +127,9 @@ def redact_faults(data: Any, in_message: bool = False) -> Any:
     for key, value in data.items():
         if in_message and key == "Description":
             result[key] = value
-        elif key in FAKE_IDS and value is not None:
-            result[key] = FAKE_IDS[key]
-        elif (key in SECRET_KEYS or key in FAULT_SECRET_KEYS) and value:
+        elif key.casefold() in _FAKE and value is not None:
+            result[key] = _FAKE[key.casefold()]
+        elif (key.casefold() in _SECRET or key in FAULT_SECRET_KEYS) and value:
             result[key] = REDACTED
         else:
             result[key] = redact_faults(value, key in FAULT_MESSAGE_LISTS)
@@ -130,5 +141,5 @@ def redact_response(data: Any) -> Any:
     if isinstance(data, list):
         return [redact_response(item) for item in data]
     if isinstance(data, dict):
-        return {k: REDACTED if k in ID_KEYS else redact_response(v) for k, v in data.items()}
+        return {k: REDACTED if k.casefold() in _ID else redact_response(v) for k, v in data.items()}
     return data
