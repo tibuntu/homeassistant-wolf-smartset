@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.7.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.6.1...v0.7.0) (2026-11-21)
+
+
+### Features
+
+* add blueprint for a hot water charge on PV surplus ([5273396](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/5273396c7c89ec567aee85baecea87986db4684c))
+* add icon translations for entities without a device class ([061cffd](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/061cffd0b4ad6b3a108e214d91ee0cc791f3a60b))
+* **coordinator:** keep the raw parameter description ([b4bf389](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/b4bf3897a0df9a138bcd085f4fc2541d70dcf126))
+* **diagnostics:** add the redacted raw description and current values ([e80abca](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/e80abca4d85441401cde51b451151fc488fc04aa))
+* **event:** add write-result event entity ([7db80fb](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/7db80fb8addf18497015d0344af19276b2be0799))
+* file curated controls as primary entities instead of configuration ([8466607](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/846660734fef52ebcebe1243f3fdfcbb080cdaa0))
+
+
+### Bug Fixes
+
+* **event:** isolate write pipeline from failing event listeners ([9b380bf](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/9b380bf2f43b5c3e543c13fb272ceaeecc52f1cd))
+* limit the registry cleanup to expert numbers and selects that became sensors ([28d32cb](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/28d32cb0bd5f17fb83c6532c1bd2e3192dcc72cc))
+* **log:** keep the system name out of the description change log line ([30ce0c3](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/30ce0c38d7fe2b33df918910f9c0286c25921fc1))
+* **log:** keep the system name out of the remaining log lines ([2cbcb3d](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/2cbcb3d0c659f56b8084681544574328fd112565))
+* **manifest:** declare the climate integration category ([de0eb48](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/de0eb48951eb2db4f7d2d0a745f8446299152ef9))
+* **redact:** close leak paths found in review ([a4d17ed](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/a4d17ed15e3d81facd5408e1fe5a230d20360e5a))
+* remove entities left behind when a parameter moved to another platform ([9a44921](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/9a449213c037844ed5b766d31c245caea68dea15))
+
 ## [0.6.1](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.6.0...v0.6.1) (2026-11-05)
 
 
