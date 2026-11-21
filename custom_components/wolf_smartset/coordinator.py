@@ -239,7 +239,7 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
             }
 
         if shape(new) != shape(self.description):
-            LOGGER.info("Parameter description of %s changed, reloading", self.system.name)
+            LOGGER.info("Parameter description changed, reloading")
             self.hass.config_entries.async_schedule_reload(self.config_entry.entry_id)
         self.raw_description = raw
         self.description = new
