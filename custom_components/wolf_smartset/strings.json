@@ -102,6 +102,11 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "fault": {
+        "name": "Fault"
+      }
+    },
     "button": {
       "undo": {
         "name": "Undo last change"
@@ -215,6 +220,9 @@
       },
       "energy_amount_htg": {
         "name": "Energy amount HTG"
+      },
+      "fault_code": {
+        "name": "Fault code"
       },
       "feed_heating_circuit_pump": {
         "name": "Feed/heating circuit pump"

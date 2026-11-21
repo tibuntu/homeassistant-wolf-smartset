@@ -102,6 +102,11 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "fault": {
+        "name": "Störung"
+      }
+    },
     "button": {
       "undo": {
         "name": "Letzte Änderung rückgängig"
@@ -215,6 +220,9 @@
       },
       "energy_amount_htg": {
         "name": "Energiemenge HZ"
+      },
+      "fault_code": {
+        "name": "Störcode"
       },
       "feed_heating_circuit_pump": {
         "name": "Zubringer-/Heizkreispumpe"

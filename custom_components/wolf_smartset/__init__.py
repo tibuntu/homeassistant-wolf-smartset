@@ -21,6 +21,7 @@ from .api import System, WolfClient
 from .const import CONF_SYSTEMS, DOMAIN, LOGGER
 from .coordinator import (
     WolfConfigEntry,
+    WolfFaultCoordinator,
     WolfRuntimeData,
     WolfSystemCoordinator,
     async_login_backoff_hook,
@@ -89,7 +90,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> bool
     # HA stop does not unload entries. A session left open keeps the gateway's push
     # bundles, and the next start reads frozen values for ~70 min until it expires.
     entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _close_session))
-    entry.runtime_data = WolfRuntimeData(http, client, coordinators, writer)
+    # Own 10-minute cadence per system; a failure leaves setup and value entities alone.
+    # The coordinators stop with the entry (config_entry.async_on_unload in HA's base class).
+    faults = {i: WolfFaultCoordinator(hass, entry, c) for i, c in coordinators.items()}
+    for fault_coordinator in faults.values():
+        await fault_coordinator.async_refresh()
+    entry.runtime_data = WolfRuntimeData(http, client, coordinators, writer, faults)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _remove_stale_entities(hass, entry)
     # The first refresh ran before any entity was listening; poll the enabled
