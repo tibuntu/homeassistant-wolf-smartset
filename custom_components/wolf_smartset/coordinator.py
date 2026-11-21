@@ -6,7 +6,7 @@ from datetime import timedelta
 import hashlib
 from typing import TYPE_CHECKING, Any, override
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import issue_registry as ir
@@ -293,6 +293,11 @@ class WolfFaultCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self.values.backoff_steps:
             # The value poll backs off from throttling or a login block; add no request.
             raise UpdateFailed("Fault read paused while Wolf SmartSet throttles the account")
+        if isinstance(self.values.last_exception, ConfigEntryAuthFailed) or any(
+            self.config_entry.async_get_active_flows(self.hass, {SOURCE_REAUTH})
+        ):
+            # HA stops the value poll after an auth failure; send nothing until reauth.
+            raise UpdateFailed("Fault read paused until the account is re-authenticated")
         try:
             return await self.values.client.read_fault_messages(self.values.system)
         except WolfError as err:

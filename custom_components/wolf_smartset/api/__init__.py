@@ -85,6 +85,10 @@ class SystemOffline(WolfError):
     """The gateway is not connected to the portal."""
 
 
+class NoSession(WolfError):
+    """No valid token or session; a request that must not log in was not sent."""
+
+
 class ParameterReadError(WolfError):
     """At least one requested value cannot be read."""
 
@@ -471,13 +475,19 @@ class WolfClient:
         ]
 
     async def read_fault_messages(self, system: System) -> dict[str, Any]:
-        """Return the raw ReadFaultMessages response with the portal's payload (ADR-Polling-019).
+        """Return the raw ReadFaultMessages response (ADR-Polling-019, ADR-Polling-020).
 
-        No SessionId and no retry: the body is the browser's. A 401 is raised without
-        dropping the token, so a failing fault read never logs in by itself; the value
-        poll keeps owning token and session.
+        No SessionId and no retry: the body is the browser's. It never logs in and never
+        creates or refreshes a session: without a valid token and session from the value
+        poll it raises NoSession and sends nothing. A 401 is raised without dropping the
+        token. The value poll keeps owning login, token and session.
         """
-        await self._ensure_session()
+        if (
+            self._token is None
+            or self._session_id is None
+            or time.monotonic() >= self._token_expires
+        ):
+            raise NoSession("ReadFaultMessages")
         payload = {"LastRead": None, "GatewayId": system.gateway_id, "SystemId": system.id}
         try:
             return await self._call("POST", "ReadFaultMessages", json=payload)

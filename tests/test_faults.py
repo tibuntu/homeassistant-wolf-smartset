@@ -5,9 +5,11 @@ from datetime import timedelta
 import json
 from pathlib import Path
 import re
+import time
 from unittest.mock import MagicMock
 
 from freezegun.api import FrozenDateTimeFactory
+from homeassistant.config_entries import SOURCE_REAUTH
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
@@ -15,8 +17,14 @@ import httpx
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
-from custom_components.wolf_smartset.api import ApiError, TooManyRequests, WolfClient
-from custom_components.wolf_smartset.const import DOMAIN, FAULT_INTERVAL
+from custom_components.wolf_smartset.api import (
+    ApiError,
+    AuthError,
+    NoSession,
+    TooManyRequests,
+    WolfClient,
+)
+from custom_components.wolf_smartset.const import CONF_SCAN_INTERVAL, DOMAIN, FAULT_INTERVAL
 
 from .conftest import FAULTS
 from .test_api import SYSTEM, FakePortal
@@ -48,6 +56,12 @@ async def client(portal: FakePortal):
         yield WolfClient(http, "user", portal.password)
 
 
+async def _value_poll(client: WolfClient, portal: FakePortal) -> None:
+    """Login and session come from a value request, as in the integration."""
+    portal.api["GetSystemList"] = lambda r: httpx.Response(200, json=[])
+    await client.get_systems()
+
+
 async def test_request_path_and_payload(client: WolfClient, portal: FakePortal) -> None:
     """POST ReadFaultMessages with the browser's body: no SessionId, existing token."""
     seen: list[httpx.Request] = []
@@ -57,13 +71,14 @@ async def test_request_path_and_payload(client: WolfClient, portal: FakePortal) 
         return httpx.Response(200, json=FAULTS)
 
     portal.api["ReadFaultMessages"] = faults
+    await _value_poll(client, portal)
     assert await client.read_fault_messages(SYSTEM) == FAULTS
     (request,) = seen
     assert request.method == "POST"
     assert request.url.path == "/portal/api/portal/ReadFaultMessages"
     assert json.loads(request.content) == {"LastRead": None, "GatewayId": 2, "SystemId": 1}
     assert request.headers["Authorization"] == "Bearer t1"
-    assert portal.calls == ["CreateSession2", "ReadFaultMessages"]
+    assert portal.calls == ["CreateSession2", "GetSystemList", "ReadFaultMessages"]
     assert portal.logins == 1
 
 
@@ -76,6 +91,7 @@ async def test_failed_read_is_not_retried_and_logs_in_no_further(
 ) -> None:
     """401, throttling or a lost session: one request, no new login, token kept."""
     portal.api["ReadFaultMessages"] = lambda r: httpx.Response(status, json=body)
+    await _value_poll(client, portal)
     for _ in range(3):
         with pytest.raises(error):
             await client.read_fault_messages(SYSTEM)
@@ -84,13 +100,56 @@ async def test_failed_read_is_not_retried_and_logs_in_no_further(
     assert client.login_blocked_seconds == 0
 
 
+async def test_no_request_without_token_or_session(client: WolfClient, portal: FakePortal) -> None:
+    """Before any value request there is no token: nothing is sent, nobody logs in."""
+    for _ in range(3):
+        with pytest.raises(NoSession):
+            await client.read_fault_messages(SYSTEM)
+    assert portal.requests == 0
+
+
+async def test_no_login_after_password_change_and_token_expiry(
+    client: WolfClient, portal: FakePortal
+) -> None:
+    """Changed password, expired token: fault reads send no login POST and no request."""
+    await _value_poll(client, portal)
+    portal.password = "changed"
+    client._token_expires = time.monotonic() - 1
+    before = portal.requests
+    for _ in range(5):
+        with pytest.raises(NoSession):
+            await client.read_fault_messages(SYSTEM)
+    assert portal.requests == before
+    assert portal.logins == 1
+
+
+async def test_no_request_without_session(client: WolfClient, portal: FakePortal) -> None:
+    """A valid token without a session: no CreateSession2, no request."""
+    await _value_poll(client, portal)
+    client._session_id = None
+    before = portal.requests
+    with pytest.raises(NoSession):
+        await client.read_fault_messages(SYSTEM)
+    assert portal.requests == before
+
+
+async def test_no_session_refresh(client: WolfClient, portal: FakePortal) -> None:
+    """A session older than the refresh interval is not refreshed by the fault read."""
+    portal.api["ReadFaultMessages"] = lambda r: httpx.Response(200, json=FAULTS)
+    await _value_poll(client, portal)
+    client._session_refreshed -= 3600
+    await client.read_fault_messages(SYSTEM)
+    assert "UpdateSession" not in portal.calls
+
+
 def test_cadence_is_ten_minutes() -> None:
     """Fixed, not an option (owner decision 2026-11-21)."""
     assert timedelta(minutes=10) == FAULT_INTERVAL
 
 
 async def _setup(hass: HomeAssistant, entry: MockConfigEntry) -> tuple[str, str]:
-    entry.add_to_hass(hass)
+    if hass.config_entries.async_get_entry(entry.entry_id) is None:
+        entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     registry = er.async_get(hass)
@@ -161,24 +220,88 @@ async def test_failed_fault_read_keeps_value_entities(
     mock_config_entry: MockConfigEntry,
     freezer: FrozenDateTimeFactory,
 ) -> None:
-    """Only the two fault entities go unavailable; they recover on the next read."""
-    mock_client.read_fault_messages.side_effect = TooManyRequests("ReadFaultMessages")
+    """A fault read failing at a 10-minute tick leaves the value coordinator untouched.
+
+    The poll interval is 420 s, so no value poll runs at the 600 s tick and none can
+    hide a leak into the value coordinator (backoff, interval, update error).
+    """
+    mock_config_entry.add_to_hass(hass)
+    hass.config_entries.async_update_entry(mock_config_entry, options={CONF_SCAN_INTERVAL: 420})
     fault, code = await _setup(hass, mock_config_entry)
     outside = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, OUTSIDE)
     assert outside
+    values = mock_config_entry.runtime_data.coordinators[1234]
+    assert hass.states.get(fault).state == STATE_OFF
+    polls = mock_client.get_system_state.call_count
+
+    freezer.tick(timedelta(seconds=420))  # the value poll, before the fault tick
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert mock_client.get_system_state.call_count == polls + 1
+    mock_client.read_fault_messages.side_effect = TooManyRequests("ReadFaultMessages")
+    freezer.tick(FAULT_INTERVAL - timedelta(seconds=420))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert mock_client.read_fault_messages.call_count == 2
+    assert mock_client.get_system_state.call_count == polls + 1  # no value poll at 600 s
     assert hass.states.get(fault).state == STATE_UNAVAILABLE
     assert hass.states.get(code).state == STATE_UNAVAILABLE
     assert hass.states.get(outside).state != STATE_UNAVAILABLE
-    coordinator = mock_config_entry.runtime_data.coordinators[1234]
-    assert coordinator.last_update_success and coordinator.backoff_steps == 0
-    assert mock_client.read_fault_messages.call_count == 1
+    assert values.last_update_success
+    assert values.backoff_steps == 0
+    assert values.update_interval == timedelta(seconds=420)
 
     mock_client.read_fault_messages.side_effect = None
     freezer.tick(FAULT_INTERVAL)
     async_fire_time_changed(hass)
     await hass.async_block_till_done()
-    assert mock_client.read_fault_messages.call_count == 2
+    assert mock_client.read_fault_messages.call_count == 3
     assert hass.states.get(fault).state == STATE_OFF
+
+
+async def test_no_fault_read_after_auth_failure(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """After the value poll's auth failure, fault reads send nothing; one reauth flow."""
+    await _setup(hass, mock_config_entry)
+    reads = mock_client.read_fault_messages.call_count
+    mock_client.get_system_state.side_effect = AuthError("login form shown again")
+    for _ in range(4):
+        freezer.tick(FAULT_INTERVAL)
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    assert mock_client.read_fault_messages.call_count == reads
+    (flow,) = mock_config_entry.async_get_active_flows(hass, {SOURCE_REAUTH})
+    assert not mock_config_entry.runtime_data.faults[1234].last_update_success
+
+    # The user dismisses the reauth flow: the value poll stays stopped, so do the reads.
+    hass.config_entries.flow.async_abort(flow["flow_id"])
+    for _ in range(2):
+        freezer.tick(FAULT_INTERVAL)
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    assert not list(mock_config_entry.async_get_active_flows(hass, {SOURCE_REAUTH}))
+    assert mock_client.read_fault_messages.call_count == reads
+
+
+async def test_no_fault_read_while_reauth_flow_is_open(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """A reauth flow started elsewhere (config flow, another system) pauses the read too."""
+    await _setup(hass, mock_config_entry)
+    reads = mock_client.read_fault_messages.call_count
+    mock_config_entry.async_start_reauth(hass)
+    await hass.async_block_till_done()
+    freezer.tick(FAULT_INTERVAL)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert mock_client.read_fault_messages.call_count == reads
 
 
 async def test_reads_every_ten_minutes_and_pauses_while_throttled(
