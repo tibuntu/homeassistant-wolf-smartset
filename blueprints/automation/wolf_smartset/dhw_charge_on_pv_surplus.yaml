@@ -1,0 +1,103 @@
+blueprint:
+  name: Wolf SmartSet - hot water charge on PV surplus
+  description: >-
+    Turns on the "1x Warmwasser" switch once per PV surplus episode. The
+    controller ends the charge by itself; this blueprint never turns the switch
+    off. Every run is a write to the controller (EEPROM) and goes through the
+    integration's write pipeline: with dry run on (the default) nothing is
+    sent and the switch snaps back.
+  domain: automation
+  source_url: https://github.com/tibuntu/homeassistant-wolf-smartset/blob/main/blueprints/automation/wolf_smartset/dhw_charge_on_pv_surplus.yaml
+  homeassistant:
+    min_version: 2026.10.0
+  input:
+    surplus_sensor:
+      name: PV surplus power
+      description: Power that is fed into the grid (positive = surplus), in W.
+      selector:
+        entity:
+          domain: sensor
+          device_class: power
+    surplus_threshold:
+      name: Surplus threshold
+      description: The charge starts when the surplus stays above this value.
+      default: 1500
+      selector:
+        number:
+          min: 0
+          max: 20000
+          step: 100
+          unit_of_measurement: W
+          mode: box
+    hold_time:
+      name: Hold time
+      description: How long the surplus must stay above the threshold.
+      default:
+        minutes: 10
+      selector:
+        duration:
+    dhw_temperature_sensor:
+      name: Hot water temperature
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    dhw_temperature_limit:
+      name: Hot water temperature limit
+      description: No charge when the tank is at or above this temperature.
+      default: 45
+      selector:
+        number:
+          min: 20
+          max: 70
+          step: 1
+          unit_of_measurement: °C
+          mode: box
+    cooldown_minutes:
+      name: Cooldown
+      description: Minimum time between two runs of this automation.
+      default: 180
+      selector:
+        number:
+          min: 0
+          max: 1440
+          step: 5
+          unit_of_measurement: min
+          mode: box
+    dhw_switch:
+      name: One-time hot water charge switch
+      description: The "1x Warmwasser" switch of the Wolf SmartSet integration.
+      selector:
+        entity:
+          integration: wolf_smartset
+          domain: switch
+
+mode: single
+max_exceeded: silent
+
+variables:
+  cooldown_minutes: !input cooldown_minutes
+
+triggers:
+  - trigger: numeric_state
+    entity_id: !input surplus_sensor
+    above: !input surplus_threshold
+    for: !input hold_time
+
+conditions:
+  - condition: numeric_state
+    entity_id: !input dhw_temperature_sensor
+    below: !input dhw_temperature_limit
+  - condition: state
+    entity_id: !input dhw_switch
+    state: "off"
+  - condition: template
+    value_template: >-
+      {{ this.attributes.last_triggered is none
+         or now() - this.attributes.last_triggered
+            >= timedelta(minutes=cooldown_minutes | float(0)) }}
+
+actions:
+  - action: switch.turn_on
+    target:
+      entity_id: !input dhw_switch
