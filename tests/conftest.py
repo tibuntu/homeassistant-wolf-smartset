@@ -21,6 +21,10 @@ FIXTURES = Path(__file__).parent / "fixtures"
 DESCRIPTION: dict[str, Any] = json.loads(
     (FIXTURES / "description_heatpump.json").read_text(encoding="utf-8")
 )
+# Recorded ReadFaultMessages response: no current fault, five history entries.
+FAULTS: dict[str, Any] = json.loads(
+    (FIXTURES / "real" / "fault_messages.json").read_text(encoding="utf-8")
+)
 SYSTEM = System(id=1234, gateway_id=5678, name="Home", share_id=None)
 # Values the fake portal returns: those embedded in the description, else "0".
 SEED = {p.value_id: p.value or "0" for p in parse_description(DESCRIPTION).parameters.values()}
@@ -90,6 +94,7 @@ def mock_client(description: dict[str, Any]) -> Generator[MagicMock]:
         )
         client.close = AsyncMock()
         client.write_value = AsyncMock(return_value={})
+        client.read_fault_messages = AsyncMock(return_value=copy.deepcopy(FAULTS))
         client.login_count = 1
         client.last_login = None
         client.login_blocked_seconds = 0

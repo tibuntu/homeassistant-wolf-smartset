@@ -1,6 +1,7 @@
 """Base entity for Wolf SmartSet parameters."""
 
 from collections.abc import Iterable
+from typing import Any
 
 from homeassistant.const import EntityCategory
 from homeassistant.helpers import device_registry as dr
@@ -24,6 +25,11 @@ def system_device_info(coordinator: WolfSystemCoordinator) -> DeviceInfo:
         model="SmartSet system",
         configuration_url="https://www.wolf-smartset.com/",
     )
+
+
+def current_faults(data: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """CurrentMessages of a ReadFaultMessages response, newest first like the history."""
+    return (data or {}).get("CurrentMessages") or []
 
 
 def parse_number(raw: str | None) -> float | None:

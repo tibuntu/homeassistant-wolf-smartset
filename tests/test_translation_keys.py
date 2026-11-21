@@ -22,8 +22,15 @@ from .test_model import _descriptors
 COMPONENT = FIXTURES.parent.parent / "custom_components" / "wolf_smartset"
 # hassfest: [a-z0-9-_]+, no leading or trailing hyphen or underscore
 KEY_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-_]*[a-z0-9])?$")
-# Keys outside TRANSLATION_KEYS: the undo button and the write-result event.
-EXTRA = {("button", "undo"), ("event", "write")}
+# Keys outside TRANSLATION_KEYS: the undo button, the write-result event and the fault entities.
+EXTRA = {
+    ("button", "undo"),
+    ("event", "write"),
+    ("binary_sensor", "fault"),
+    ("sensor", "fault_code"),
+}
+# Unique ID suffixes of the per-system entities that are not parameters.
+SYSTEM_ENTITIES = {"undo", "connectivity", "write", "fault", "fault_code"}
 CURATED = {
     (platform, key) for platform, table in TRANSLATION_KEYS.items() for key in table.values()
 }
@@ -170,16 +177,9 @@ async def test_registry_keeps_entity_ids_and_gets_translation_keys(
         for p in parse_description(mock_client.get_description.return_value).parameters.values()
         if p.kind
     ]
-    assert unique_ids == {f"1234_{p.parameter_id}" for p in mapped} | {
-        "1234_undo",
-        "1234_connectivity",
-        "1234_write",
-    }
-    keyed = {
-        e.unique_id
-        for e in entries
-        if e.translation_key and e.unique_id not in ("1234_undo", "1234_write")
-    }
+    system_entities = {f"1234_{suffix}" for suffix in SYSTEM_ENTITIES}
+    assert unique_ids == {f"1234_{p.parameter_id}" for p in mapped} | system_entities
+    keyed = {e.unique_id for e in entries if e.translation_key} - system_entities
     assert keyed == {f"1234_{p.parameter_id}" for p in mapped if p.translation_key}
 
     exhaust = registry.async_get_entity_id("sensor", DOMAIN, "1234_27004300001")

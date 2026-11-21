@@ -19,7 +19,8 @@
       "jaz_previous_year": {"default": "mdi:chart-line"},
       "jaz_year_before_last": {"default": "mdi:chart-line"},
       "maz_current_month": {"default": "mdi:chart-line"},
-      "taz_previous_day": {"default": "mdi:chart-line"}
+      "taz_previous_day": {"default": "mdi:chart-line"},
+      "fault_code": {"default": "mdi:alert-octagon-outline"}
     },
     "number": {
       "setpoint_correction": {"default": "mdi:thermometer-plus"}
@@ -38,6 +39,9 @@
     },
     "button": {
       "undo": {"default": "mdi:undo"}
+    },
+    "binary_sensor": {
+      "fault": {"default": "mdi:alert-circle", "state": {"off": "mdi:check-circle-outline"}}
     },
     "event": {
       "write": {

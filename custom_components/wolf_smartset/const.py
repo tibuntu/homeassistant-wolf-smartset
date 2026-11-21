@@ -19,3 +19,4 @@ DEFAULT_MAX_WRITES_PER_HOUR = 20  # ADR-Writes-012
 MAX_BACKOFF = timedelta(hours=1)
 BACKOFF_ISSUE_STEPS = 3
 DESCRIPTION_MAX_AGE = timedelta(days=1)
+FAULT_INTERVAL = timedelta(minutes=10)  # ReadFaultMessages, fixed (ADR-Polling-019)

@@ -1,4 +1,4 @@
-"""Checkbox parameters (ControlType 5) and the gateway connectivity as binary sensors."""
+"""Checkbox parameters (ControlType 5), gateway connectivity and faults as binary sensors."""
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -9,8 +9,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .coordinator import WolfConfigEntry, WolfSystemCoordinator
-from .entity import WolfEntity, add_entities, system_device_info
+from .coordinator import WolfConfigEntry, WolfFaultCoordinator, WolfSystemCoordinator
+from .entity import WolfEntity, add_entities, current_faults, system_device_info
 from .model import Kind
 
 PARALLEL_UPDATES = 0
@@ -27,6 +27,26 @@ async def async_setup_entry(
         WolfConnectivitySensor(coordinator)
         for coordinator in entry.runtime_data.coordinators.values()
     )
+    async_add_entities(WolfFaultSensor(faults) for faults in entry.runtime_data.faults.values())
+
+
+class WolfFaultSensor(CoordinatorEntity[WolfFaultCoordinator], BinarySensorEntity):
+    """On while ReadFaultMessages lists a current fault (ADR-Polling-019)."""
+
+    _attr_has_entity_name = True
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_translation_key = "fault"
+
+    def __init__(self, coordinator: WolfFaultCoordinator) -> None:
+        """One per system, on the system device."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.values.system.id}_fault"
+        self._attr_device_info = system_device_info(coordinator.values)
+
+    @property
+    def is_on(self) -> bool:
+        """Any entry in CurrentMessages."""
+        return bool(current_faults(self.coordinator.data))
 
 
 class WolfConnectivitySensor(CoordinatorEntity[WolfSystemCoordinator], BinarySensorEntity):

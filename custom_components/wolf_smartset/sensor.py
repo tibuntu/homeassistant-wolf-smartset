@@ -1,4 +1,6 @@
-"""Read-only parameters as sensors."""
+"""Read-only parameters and the fault code as sensors."""
+
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -20,9 +22,10 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .coordinator import WolfConfigEntry, WolfSystemCoordinator
-from .entity import WolfEntity, add_entities, parse_number
+from .coordinator import WolfConfigEntry, WolfFaultCoordinator, WolfSystemCoordinator
+from .entity import WolfEntity, add_entities, current_faults, parse_number, system_device_info
 from .model import CT_NUMERIC, Kind, Parameter
 
 PARALLEL_UPDATES = 0
@@ -71,6 +74,47 @@ async def async_setup_entry(
 ) -> None:
     """Set up sensors for read-only, enum and text parameters."""
     add_entities(entry, async_add_entities, (Kind.SENSOR, Kind.ENUM, Kind.TEXT), WolfSensor)
+    async_add_entities(WolfFaultCodeSensor(faults) for faults in entry.runtime_data.faults.values())
+
+
+class WolfFaultCodeSensor(CoordinatorEntity[WolfFaultCoordinator], SensorEntity):
+    """ErrorCode of the newest current fault, plus the newest history entry (ADR-Polling-019).
+
+    Faults last 1 to 3 minutes, shorter than the 10-minute read; the last_fault_*
+    attributes keep a fault that came and went between two reads. Wolf's texts stay
+    as sent; no Device, SystemName or IDs (rule 2).
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "fault_code"
+
+    def __init__(self, coordinator: WolfFaultCoordinator) -> None:
+        """One per system, on the system device."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.values.system.id}_fault_code"
+        self._attr_device_info = system_device_info(coordinator.values)
+
+    @property
+    def native_value(self) -> int | None:
+        """ErrorCode of the newest entry in CurrentMessages, None without one."""
+        current = current_faults(self.coordinator.data)
+        return current[0].get("ErrorCode") if current else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Current fault text and time, and the newest history entry."""
+        current = current_faults(self.coordinator.data)
+        now = current[0] if current else {}
+        history = (self.coordinator.data or {}).get("HistoryMessages") or []
+        last = history[0] if history else {}  # Index 0 = newest (recorded 2026-11-21)
+        return {
+            "description": now.get("Description"),
+            "occurred": now.get("OccurTimeLocal"),
+            "last_fault_code": last.get("ErrorCode"),
+            "last_fault_description": last.get("Description"),
+            "last_fault_occurred": last.get("OccurTimeLocal"),
+            "last_fault_ended": last.get("OutgoingTimeLocal"),
+        }
 
 
 class WolfSensor(WolfEntity, SensorEntity):

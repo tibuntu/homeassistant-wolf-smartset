@@ -39,6 +39,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DESCRIPTION_MAX_AGE,
     DOMAIN,
+    FAULT_INTERVAL,
     LOGGER,
     MAX_BACKOFF,
 )
@@ -98,6 +99,7 @@ class WolfRuntimeData:
     client: WolfClient
     coordinators: dict[int, WolfSystemCoordinator]
     writer: WriteManager
+    faults: dict[int, WolfFaultCoordinator]
 
 
 type WolfConfigEntry = ConfigEntry[WolfRuntimeData]
@@ -262,3 +264,36 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
                 translation_key="throttled",
                 translation_placeholders={"system": self.system.name},
             )
+
+
+class WolfFaultCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+    """Read ReadFaultMessages of one system every 10 minutes (ADR-Polling-019).
+
+    Separate from the value coordinator: a failed fault read makes only the fault
+    entities unavailable. Data is the unredacted response; the diagnostics redact it.
+    """
+
+    config_entry: WolfConfigEntry
+
+    def __init__(
+        self, hass: HomeAssistant, entry: WolfConfigEntry, values: WolfSystemCoordinator
+    ) -> None:
+        """Fixed cadence, not an option (owner decision 2026-11-21)."""
+        super().__init__(
+            hass,
+            LOGGER,
+            config_entry=entry,
+            name=f"{DOMAIN}_faults",
+            update_interval=FAULT_INTERVAL,
+        )
+        self.values = values
+
+    @override
+    async def _async_update_data(self) -> dict[str, Any]:
+        if self.values.backoff_steps:
+            # The value poll backs off from throttling or a login block; add no request.
+            raise UpdateFailed("Fault read paused while Wolf SmartSet throttles the account")
+        try:
+            return await self.values.client.read_fault_messages(self.values.system)
+        except WolfError as err:
+            raise UpdateFailed(f"Cannot read the fault messages: {err}") from err
