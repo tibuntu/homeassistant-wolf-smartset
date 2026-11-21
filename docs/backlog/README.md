@@ -4,7 +4,6 @@ One brief per finding of the feature research of 2026-11-20 (integration 0.6.1, 
 
 | # | Brief | Status | Size |
 |---|---|---|---|
-| 01 | [Write-result event entity](01-write-result-event-entity.md) | ready | small |
 | 03 | [PV-surplus DHW blueprint](03-pv-surplus-dhw-blueprint.md) | ready | small |
 | 04 | [Fixture-grade diagnostics](04-fixture-grade-diagnostics.md) | ready | medium |
 | 05 | [Primary controls out of "Configuration"](05-primary-controls-entity-category.md) | ready (owner chose the proposal) | one line plus ADR |

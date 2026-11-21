@@ -8,7 +8,7 @@ Entities without a device class show a generic icon: the status and valve sensor
 
 ## Work
 
-Add `custom_components/wolf_smartset/icons.json`, keyed by platform and translation key (`translation_keys.py`, plus `undo`, plus the event entity `write` if [brief 01](01-write-result-event-entity.md) has landed).
+Add `custom_components/wolf_smartset/icons.json`, keyed by platform and translation key (`translation_keys.py`, plus `undo`, plus the event entity `write` on platform `event` from `event.py`).
 
 Scope: every curated key whose entity has no device class. Temperature, power, energy, pressure, duration, flow and frequency sensors already get an icon from their device class (`UNITS` in `sensor.py`).
 
