@@ -76,8 +76,8 @@ rules:
     status: todo
     comment: Write errors are translated; UpdateFailed and ConfigEntryAuthFailed messages are not.
   icon-translations:
-    status: todo
-    comment: No icons.json.
+    status: done
+    comment: icons.json gives a default icon to every curated entity without a device class.
   reconfiguration-flow: done
   repair-issues: done
   stale-devices:

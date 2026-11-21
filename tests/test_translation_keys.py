@@ -12,6 +12,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.wolf_smartset.const import DOMAIN
 from custom_components.wolf_smartset.model import PLATFORMS, Kind, Parameter, parse_description
+from custom_components.wolf_smartset.sensor import unit_mapping
 from custom_components.wolf_smartset.translation_keys import TRANSLATION_KEYS
 from custom_components.wolf_smartset.write import EVENT_TYPES
 
@@ -250,3 +251,27 @@ async def test_writable_parameter_without_key_stays_config(
     assert unkeyed and unkeyed.translation_key is None
     assert unkeyed.entity_category is EntityCategory.CONFIG
     assert keyed and keyed.entity_category is None
+
+
+def _has_device_class(platform: str, parameter: Parameter) -> bool:
+    """Whether HA derives an icon from the entity's device class (enum sensors get none)."""
+    if platform == "sensor":
+        return parameter.kind is not Kind.ENUM and unit_mapping(parameter)[0] is not None
+    return platform == "number" and parameter.unit == "°C"
+
+
+def test_icons_pin_translation_keys(description: dict[str, Any]) -> None:
+    """Icons name existing keys, and every key without a device class has a default icon."""
+    icons = json.loads((COMPONENT / "icons.json").read_text(encoding="utf-8"))["entity"]
+    named = {(platform, key) for platform, keys in icons.items() for key in keys}
+    assert named <= CURATED | EXTRA
+    assert all(
+        entry["default"].startswith("mdi:") for keys in icons.values() for entry in keys.values()
+    )
+    parameters = parse_description(description).parameters
+    expected = set(EXTRA)
+    for platform, table in TRANSLATION_KEYS.items():
+        for parameter_id, key in table.items():
+            if not _has_device_class(platform, parameters[parameter_id]):
+                expected.add((platform, key))
+    assert named == expected
