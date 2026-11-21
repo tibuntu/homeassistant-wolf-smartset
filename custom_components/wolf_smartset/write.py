@@ -134,7 +134,8 @@ class WriteManager:
             hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.history"
         )
         self._lock = asyncio.Lock()
-        self._pending: dict[tuple[int, int], tuple[float, dict[str, Any]]] = {}
+        # (system, value) -> (written at, record, value the portal showed before the first write)
+        self._pending: dict[tuple[int, int], tuple[float, dict[str, Any], str | None]] = {}
         self._listeners: list[Callable[[], None]] = []
         self._event_listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self.history: list[dict[str, Any]] = []
@@ -252,12 +253,16 @@ class WriteManager:
                     translation_placeholders={"name": parameter.label, "error": str(err)},
                 ) from err
             record["response"] = redact_response(response)
-            # Optimistic: show the new value now; the next poll confirms or corrects it.
+            # Optimistic: show the new value now; async_check_pending confirms or corrects it.
             if coordinator.data is not None:
                 coordinator.data[parameter.value_id] = target
             if entity is not None:
                 entity.async_write_ha_state()
-            self._pending[(coordinator.system.id, parameter.value_id)] = (now, record)
+            key = (coordinator.system.id, parameter.value_id)
+            # A write over a pending one (a revert, Undo) keeps the value from before the first
+            # write: a stale read of it must not confirm the newer write.
+            before = self._pending[key][2] if key in self._pending else current
+            self._pending[key] = (now, record, before)
             record["confirmed"] = None  # set by async_check_pending
             return await self._record(record, RESULT_OK)
 
@@ -268,9 +273,10 @@ class WriteManager:
         A poll that started before the write or runs right after it may still
         carry the old value, and the portal may show some values minutes late.
         The first poll after CONFIRM_AFTER_SECONDS that reads the written value
-        confirms it; a different value is final only after the settle window,
-        until then the written value is put back. Runs before the entities'
-        listeners, so they never show the stale value.
+        confirms it, unless that is also the value from before the write (a
+        revert, which a stale read cannot tell apart). Anything else is final
+        only after the settle window; until then the written value is put back.
+        Runs before the entities' listeners, so they never show the stale value.
         """
         if not coordinator.last_update_success or coordinator.data is None:
             return
@@ -279,16 +285,21 @@ class WriteManager:
         interval = (coordinator.update_interval or timedelta()).total_seconds()
         settle = max(SETTLE_POLLS * interval, SETTLE_SECONDS)
         for key in [k for k in self._pending if k[0] == coordinator.system.id]:
-            written_at, record = self._pending[key]
+            written_at, record, before = self._pending[key]
             value_id = key[1]
             parameter = coordinator.description.parameters.get(record["parameter_id"])
             current = coordinator.data.get(value_id)
             confirmed = parameter is not None and same_value(parameter, current, record["new"])
+            stale = (
+                parameter is not None
+                and before is not None
+                and same_value(parameter, current, before)
+            )
             age = now - written_at
             if (
                 age < CONFIRM_AFTER_SECONDS
                 or value_id not in coordinator.polled
-                or (not confirmed and age < settle)
+                or ((not confirmed or stale) and age < settle)
             ):
                 coordinator.data[value_id] = record["new"]
                 continue

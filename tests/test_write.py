@@ -486,6 +486,54 @@ async def test_second_write_replaces_the_pending_one(
     assert mock_client.write_value.await_count == 2
 
 
+async def test_revert_is_not_confirmed_by_a_stale_read(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """Write 60, revert to 50 while pending: a stale 50 must not confirm the revert."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    seen: list[str] = []
+    mock_config_entry.runtime_data.writer.async_add_event_listener(
+        lambda result, record: seen.append(f"{result} {record['new']}")
+    )
+    await _set_setpoint(hass, 60)
+    assert await _poll_after(hass, mock_config_entry, freezer, 100) == "60.0"  # portal: 50
+    await _set_setpoint(hass, 50)  # revert, sent: the entity showed 60
+    assert _history(mock_config_entry)[-1]["old"] == "60"
+
+    assert await _poll_after(hass, mock_config_entry, freezer, 40) == "50.0"  # stale 50
+    assert seen == ["ok 60", "ok 50"]
+    _portal_reads(mock_client, "60")  # the first write lands; the revert never does
+    assert await _poll_after(hass, mock_config_entry, freezer, 120) == "50.0"
+    assert await _poll_after(hass, mock_config_entry, freezer, 150) == "60.0"  # 310 s
+
+    assert seen == ["ok 60", "ok 50", "not_applied 50"]
+    assert _history(mock_config_entry)[-1]["read_back"] == "60"
+
+
+async def test_revert_is_confirmed_after_the_window(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """A revert that reads its value once the window has passed is confirmed."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    seen: list[str] = []
+    mock_config_entry.runtime_data.writer.async_add_event_listener(
+        lambda result, record: seen.append(result)
+    )
+    await _set_setpoint(hass, 60)
+    await _poll_after(hass, mock_config_entry, freezer, 100)
+    await _set_setpoint(hass, 50)
+    assert await _poll_after(hass, mock_config_entry, freezer, 290) == "50.0"
+    assert seen == ["ok", "ok"]
+    assert await _poll_after(hass, mock_config_entry, freezer, 20) == "50.0"
+    assert seen == ["ok", "ok", "confirmed"]
+
+
 async def test_dry_runs_and_no_ops_do_not_count(
     hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
