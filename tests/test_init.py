@@ -311,8 +311,13 @@ async def test_changed_description_reloads_the_entry(
     freezer: FrozenDateTimeFactory,
     description: dict[str, Any],
 ) -> None:
-    """A description with other parameters schedules a config entry reload."""
+    """A description with other parameters schedules a config entry reload.
+
+    Setup and the daily reload both keep the raw description for the diagnostics.
+    """
     await _setup(hass, mock_config_entry)
+    coordinator = next(iter(mock_config_entry.runtime_data.coordinators.values()))
+    assert coordinator.raw_description is description
     changed = copy.deepcopy(description)
     changed["MenuItems"][0]["TabViews"] = [
         tab for tab in changed["MenuItems"][0]["TabViews"] if tab["TabName"] != "Warmwasser"
@@ -323,6 +328,7 @@ async def test_changed_description_reloads_the_entry(
         async_fire_time_changed(hass)
         await hass.async_block_till_done()
     reload.assert_called_once_with(mock_config_entry.entry_id)
+    assert coordinator.raw_description is changed
 
 
 @pytest.mark.parametrize(
