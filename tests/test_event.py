@@ -73,15 +73,16 @@ async def test_confirmed_and_not_applied_events(
     read_back: str,
     event_type: str,
 ) -> None:
-    """The poll that checks the write fires confirmed or not_applied."""
+    """The poll that decides the write fires confirmed or not_applied."""
     await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
     await _set_setpoint(hass, 55)
     mock_client.get_values.side_effect = lambda system, bundle, ids, first=False: [
         Value(i, read_back if i == DHW_SETPOINT else "0", 1) for i in ids
     ]
-    freezer.tick(timedelta(seconds=120))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    for _ in range(3):  # 360 s: past the 300 s settle window at the default 120 s interval
+        freezer.tick(timedelta(seconds=120))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
     _assert_event(hass, event_type)
 
 
