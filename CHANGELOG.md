@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.1](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.7.0...v0.7.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* do not confirm a revert on a stale read of the pre-write value ([721fc36](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/721fc36f870f14b675b1549317965e6b305cce43))
+* size the settle window as one poll interval plus 30 s, at least 300 s ([c29f96b](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/c29f96bdf4f871308329544d926c6eb2ec997529))
+* wait for a settle window before a write counts as not applied ([bcf5850](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/bcf5850fe4e7c3d65cafbfd89536fd339c587605))
+
 ## [0.7.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.6.1...v0.7.0) (2026-11-21)
 
 
