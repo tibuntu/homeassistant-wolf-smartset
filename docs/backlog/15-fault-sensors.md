@@ -1,6 +1,12 @@
 # 15 – Fault sensors from ReadFaultMessages
 
-Status: needs owner decision · Size: medium · Rules: [README](README.md#rules-for-every-brief)
+Status: go given 2026-11-21 · Size: medium · Rules: [README](README.md#rules-for-every-brief)
+
+## Owner decisions (chat, 2026-11-21)
+
+1. **Go for the periodic call**: one `POST /portal/api/portal/ReadFaultMessages` with `{"LastRead": null, "GatewayId": <id>, "SystemId": <id>}` per system, without `SessionId`, using the existing access token. No new login beyond what the integration already does. `CommitFaultMessage` and every `…FaultMessageDestination…` endpoint stay off limits; never call them.
+2. **Cadence**: every 10 minutes, fixed, not an option.
+3. **Issue #25**: reopening is the owner's action later. Agents do not touch GitHub issues.
 
 ## Why
 
