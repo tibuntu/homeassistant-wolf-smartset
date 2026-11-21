@@ -107,6 +107,23 @@
         "name": "Undo last change"
       }
     },
+    "event": {
+      "write": {
+        "name": "Write result",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "ok": "Sent",
+              "confirmed": "Confirmed",
+              "not_applied": "Not applied",
+              "dry_run": "Dry run",
+              "rate_limited": "Rate limited",
+              "error": "Error"
+            }
+          }
+        }
+      }
+    },
     "number": {
       "day_temperature_heating": {
         "name": "Day temperature heating"

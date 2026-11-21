@@ -27,6 +27,7 @@ from .write import WriteManager
 PLATFORMS = [
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
+    Platform.EVENT,
     Platform.NUMBER,
     Platform.SELECT,
     Platform.SENSOR,
