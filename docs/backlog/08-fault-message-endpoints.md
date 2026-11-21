@@ -1,6 +1,6 @@
 # 08 – Fault-message endpoints
 
-Status: needs the owner's go at step 3 · Size: investigation, no entity code · Rules: [README](README.md#rules-for-every-brief)
+Status: steps 1–2 done (PR #54); waits for the owner's go at step 3 · Size: investigation, no entity code · Rules: [README](README.md#rules-for-every-brief)
 
 ## Why
 
