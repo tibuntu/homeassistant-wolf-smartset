@@ -676,3 +676,9 @@ Belege (wörtlich):
 - **[Offen]** Ob `ReadFaultMessages` am Gateway ein Push-Bundle aktiviert oder Last erzeugt. Es nimmt keine `BundleId`; das Risiko aus Abschnitt 3.3 (ungültige BundleId) betrifft diesen Aufruf daher nicht.
 - **Nicht aufrufen:** `CommitFaultMessage` quittiert eine Störung am Regler; `Create…V2`, `Update…V2` und `DeleteFaultMessageDestination` ändern die E-Mail-Benachrichtigungen des Kontos. `ReadFaultMessageDestinationList` liest nur diese Konfiguration (E-Mail-Adressen) und ist für das Ziel des Briefs nicht nötig.
 - Schritt 3 (eine einzige Lese-Anfrage an `ReadFaultMessages`) wartet auf die Freigabe des Eigentümers.
+
+### 17.5 Freigabe Schritt 3
+
+**Freigabe des Eigentümers, Chat 2026-11-21:** genau **ein** Aufruf `POST /portal/api/portal/ReadFaultMessages` mit `{"LastRead": null, "GatewayId": <id>, "SystemId": <id>}`, **ohne** `SessionId` (wie der Browser). `CommitFaultMessage` und alle `…FaultMessageDestination…`-Endpunkte bleiben gesperrt.
+
+Umsetzung: `scripts/record_fixtures.py --faults` meldet sich an, liest die Systemliste und sendet den einen Aufruf für die erste Anlage über `_call` (ohne die `SessionId`-Ergänzung und ohne die Wiederholung von `_request`). Die geschwärzte Antwort landet in `tests/fixtures/real/fault_messages.json`; die anderen Fixtures bleiben unberührt. IDs werden wie üblich ersetzt; Wolfs Störtexte (`Description`) bleiben nur innerhalb von `CurrentMessages`/`HistoryMessages` erhalten, Gerätebezeichnungen und `Payload` der Gateway-Meldungen werden geschwärzt. Den Aufruf startet der Eigentümer im eigenen Terminal. Die Antwort wird hier ergänzt, sobald sie vorliegt. [Offen]

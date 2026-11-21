@@ -1,6 +1,6 @@
 # 08 – Fault-message endpoints
 
-Status: steps 1–2 done (PR #54); waits for the owner's go at step 3 · Size: investigation, no entity code · Rules: [README](README.md#rules-for-every-brief)
+Status: step 3 approved by the owner 2026-11-21 (one ReadFaultMessages call, no SessionId); waits for the owner to run `record_fixtures.py --faults` · Size: investigation, no entity code · Rules: [README](README.md#rules-for-every-brief)
 
 ## Why
 
