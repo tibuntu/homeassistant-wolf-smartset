@@ -1,6 +1,6 @@
 # 09 – Dashboard section strategy
 
-Status: needs owner decision (step 2); the platform claim is reported, not verified · Rules: [README](README.md#rules-for-every-brief)
+Status: step 1 done (PR #53); needs owner decision (step 2) · Rules: [README](README.md#rules-for-every-brief)
 
 ## Context
 

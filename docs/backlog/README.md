@@ -9,7 +9,7 @@ One brief per finding of the feature research of 2026-11-20 (integration 0.6.1, 
 | 06 | [Icon translations](06-icon-translations.md) | ready | JSON |
 | 07 | [Registry cleanup on platform change](07-registry-cleanup-on-platform-change.md) | ready | small |
 | 08 | [Fault-message endpoints](08-fault-message-endpoints.md) | needs owner go at step 3 | investigation |
-| 09 | [Dashboard section strategy](09-dashboard-section-strategy.md) | needs owner decision | unknown |
+| 09 | [Dashboard section strategy](09-dashboard-section-strategy.md) | step 1 done (PR #53); needs owner decision (step 2) | unknown |
 | 10 | [Config entry functions return None](10-config-entry-functions-return-none.md) | waits for the next HA bump | small |
 | 12 | [Polling health sensors](12-parked-polling-health-sensors.md) | parked | |
 | 13 | [Two-speed polling](13-parked-two-speed-polling.md) | parked | |
