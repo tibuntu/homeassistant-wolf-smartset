@@ -161,3 +161,28 @@ async def test_raising_listener_does_not_fail_the_write(
     assert notified
     _assert_event(hass, "ok")
     assert "Write result listener failed" in caplog.text
+
+
+@pytest.mark.parametrize("read_back", ["55", "50"])
+async def test_check_result_fires_once(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    read_back: str,
+) -> None:
+    """One write, several later polls: ok, then confirmed or not_applied exactly once."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    seen: list[str] = []
+    mock_config_entry.runtime_data.writer.async_add_event_listener(
+        lambda result, record: seen.append(result)
+    )
+    await _set_setpoint(hass, 55)
+    mock_client.get_values.side_effect = lambda system, bundle, ids, first=False: [
+        Value(i, read_back if i == DHW_SETPOINT else "0", 1) for i in ids
+    ]
+    for _ in range(3):
+        freezer.tick(timedelta(seconds=120))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
+    assert seen == ["ok", "confirmed" if read_back == "55" else "not_applied"]
