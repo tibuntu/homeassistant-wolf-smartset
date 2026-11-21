@@ -21,16 +21,17 @@ The "1x Warmwasser" switch was confirmed on the first poll every time. The resul
 
 ## Decision
 
-This ADR replaces steps 9 and 10 of ADR-Writes-013 for the mismatch case; everything else there stays.
+This ADR amends steps 9 and 10 of ADR-Writes-013. The hold of step 9 is extended, not replaced: it still covers polls within 30 s of the write and polls that do not read the value, and now also the cases below. Everything else there stays.
 
-1. The first successful poll at least 30 s after the write that reads the written value confirms it (`confirmed: true`, event `confirmed`).
-2. A different value is final only once the settle window has passed: `max(2 × poll interval, 300 s)`. Until then the written value stays in the coordinator data, so entities and the no-op check keep seeing it.
+1. The first successful poll at least 30 s after the write that reads the written value confirms it (`confirmed: true`, event `confirmed`), unless that value is also the pre-write value (see 5).
+2. A different value is final only once the settle window has passed: `max(poll interval + 30 s, 300 s)`. Until then the written value stays in the coordinator data, so entities and the no-op check keep seeing it.
 3. The first successful poll after the window that still reads another value records `not_applied` as before (`confirmed: false`, `read_back`, warning, event).
-4. `confirmed` or `not_applied` fire exactly once per write. A newer write to the same parameter replaces the pending one; the replaced record keeps `confirmed: null` and fires neither. The history format and the restart behaviour are unchanged.
+4. `confirmed` or `not_applied` fire exactly once per write. A newer write to the same parameter replaces the pending one; the replaced record keeps `confirmed: null` and fires neither. The history format and the restart behaviour are unchanged: a restart or a reload of the entry (every options change reloads it) during the window drops the pending check, and that write fires no second event (`confirmed: false`, `read_back: null` after the next load).
+5. A write that replaces a pending one carries over the pre-write value, the value the portal showed before the first write of the chain. A read equal to it does not confirm before the window has passed: after a revert (60, then back to 50) a late portal still showing 50 cannot be told apart from an applied revert. Without this the revert was confirmed on a stale read and the later 60 never fired `not_applied`.
 
 ## Rationale
 
-The latest confirmation measured came 240 s after the write. 300 s covers that with margin at the shortest allowed interval (60 s). Two intervals keep at least one more poll after a stale one in case the portal's delay is tied to polls rather than to time. At the default 120 s the window is 300 s, so a real rejection is reported on the third poll (about 6 minutes).
+The latest confirmation measured came 240 s after the write. 300 s covers that with margin at any allowed interval (60 s and up). The first poll that may decide comes within one interval after the 30 s; a window of interval + 30 s leaves at least one more poll after it, in case the portal's delay is tied to polls rather than to time. This term takes over above a 270 s interval; at 3600 s the window is 3630 s, so a rejection is reported on the second poll. At the default 120 s the window is 300 s, so a real rejection is reported on the third poll (about 6 minutes).
 
 ### Alternatives Considered
 
