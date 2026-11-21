@@ -28,7 +28,12 @@ def system_device_info(coordinator: WolfSystemCoordinator) -> DeviceInfo:
 
 
 def current_faults(data: dict[str, Any] | None) -> list[dict[str, Any]]:
-    """CurrentMessages of a ReadFaultMessages response, newest first like the history."""
+    """CurrentMessages of a ReadFaultMessages response.
+
+    Assumption: newest first, like the recorded history (Index 0 = newest). No current
+    entry has been recorded yet (docs/discovery.md, 17.6), so CurrentMessages[0] being
+    the newest fault is inferred, not measured.
+    """
     return (data or {}).get("CurrentMessages") or []
 
 

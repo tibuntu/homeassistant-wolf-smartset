@@ -78,7 +78,7 @@ async def async_setup_entry(
 
 
 class WolfFaultCodeSensor(CoordinatorEntity[WolfFaultCoordinator], SensorEntity):
-    """ErrorCode of the newest current fault, plus the newest history entry (ADR-Polling-019).
+    """ErrorCode of the first (assumed newest) current fault, plus the newest history entry.
 
     Faults last 1 to 3 minutes, shorter than the 10-minute read; the last_fault_*
     attributes keep a fault that came and went between two reads. Wolf's texts stay
@@ -96,7 +96,7 @@ class WolfFaultCodeSensor(CoordinatorEntity[WolfFaultCoordinator], SensorEntity)
 
     @property
     def native_value(self) -> int | None:
-        """ErrorCode of the newest entry in CurrentMessages, None without one."""
+        """ErrorCode of the first entry in CurrentMessages, None without one."""
         current = current_faults(self.coordinator.data)
         return current[0].get("ErrorCode") if current else None
 
