@@ -1,5 +1,6 @@
 """Diagnostics do not leak credentials or identifiers."""
 
+import copy
 from dataclasses import asdict, replace
 import json
 from typing import Any
@@ -26,7 +27,7 @@ from custom_components.wolf_smartset.redact import (
     secret_value_ids,
 )
 
-from .conftest import FIXTURES, SEED
+from .conftest import FAULTS, FIXTURES, SEED
 
 # One name per alternative of redact.SECRET_PARAMETER, on a non-secret control type (6).
 SECRET_NAMES = (
@@ -161,6 +162,17 @@ async def test_no_planted_marker_leaks(
     tab["ParameterDescriptors"] += [
         descriptor(ct, f"Feld {ct}", f"control-type-{ct}") for ct in sorted(SECRET_CONTROL_TYPES)
     ] + [descriptor(6, name, f"name-{name}") for name in SECRET_NAMES]
+    # The fault response: identifiers at the top level and in a current fault entry, whose
+    # Wolf text (Description) is kept on purpose; device labels and gateway payloads.
+    faults = copy.deepcopy(FAULTS) | identifiers("fault-top")
+    faults["CurrentMessages"] = [
+        {"ErrorCode": 107, "Description": "Druck Heizkreis", "Device": mark("fault-entry-device")}
+        | identifiers("fault-entry", keep=frozenset({"description"}))
+    ]
+    faults["HistoryMessages"][0]["Device"] = mark("fault-history-device")
+    faults["CommitFaultMessageEntries"] = [{"DeviceShortName": mark("fault-commit-device")}]
+    faults["GatewayEvents"] = [{"EventType": 1, "Payload": mark("fault-gateway-payload")}]
+    mock_client.read_fault_messages = AsyncMock(return_value=faults)
     # Polls return the markers too, not only the values embedded in the description.
     mock_client.get_values = AsyncMock(
         side_effect=lambda system, bundle, ids, first=False: [
@@ -200,6 +212,9 @@ async def test_no_planted_marker_leaks(
     values = result["systems"][0]["values"]
     assert {values[str(value_id)] for value_id in planted} == {"**REDACTED**"}
     assert result["writes"]["history"][-1]["response"]["SystemId"] == "**REDACTED**"
+    # The fault response did reach the file, with Wolf's fault text.
+    assert result["systems"][0]["faults"]["CurrentMessages"][0]["Description"] == "Druck Heizkreis"
+    assert result["systems"][0]["faults"]["SystemName"] == "**REDACTED**"
 
 
 async def test_description_round_trip(

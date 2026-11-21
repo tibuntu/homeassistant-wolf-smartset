@@ -8,7 +8,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 
 from .coordinator import WolfConfigEntry, WolfSystemCoordinator
-from .redact import REDACTED, redact_description, secret_value_ids
+from .redact import REDACTED, redact_description, redact_faults, secret_value_ids
 
 TO_REDACT = {CONF_USERNAME, CONF_PASSWORD, "id", "gateway_id", "name", "share_id", "title"}
 
@@ -65,6 +65,9 @@ async def async_get_config_entry_diagnostics(
                 # Fixture-grade: tests/fixtures/real/description_<n>.json and values.
                 "description": redact_description(c.raw_description),
                 "values": _values(c),
+                # Last ReadFaultMessages response, as in tests/fixtures/real/fault_messages.json.
+                "faults_last_update_success": runtime.faults[c.system.id].last_update_success,
+                "faults": redact_faults(runtime.faults[c.system.id].data),
             }
             for c in runtime.coordinators.values()
         ],
