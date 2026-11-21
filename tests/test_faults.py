@@ -269,6 +269,11 @@ async def test_no_fault_read_after_auth_failure(
     await _setup(hass, mock_config_entry)
     reads = mock_client.read_fault_messages.call_count
     mock_client.get_system_state.side_effect = AuthError("login form shown again")
+    # The value poll fails first (120 s), as in practice; one tick firing both
+    # coordinators would leave their order to the event loop.
+    freezer.tick(timedelta(seconds=120))
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
     for _ in range(4):
         freezer.tick(FAULT_INTERVAL)
         async_fire_time_changed(hass)
