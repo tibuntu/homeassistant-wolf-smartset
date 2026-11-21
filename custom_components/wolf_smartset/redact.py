@@ -59,13 +59,11 @@ def redact_ids(data: Any) -> Any:
     return _redact(data, frozenset(), blank_values=False)
 
 
-def redact_description(data: Any) -> Any:
+def redact_description(data: dict[str, Any]) -> dict[str, Any]:
     """Blank identifying values (serials, MAC, IP, system name, dates, times) and IDs.
 
     Descriptor texts under MenuItems stay, everything else gets redact_ids.
     """
-    if not isinstance(data, dict):
-        return _redact(data, frozenset(), blank_values=True)
     rest = _redact({k: v for k, v in data.items() if k != "MenuItems"}, frozenset(), True)
     return {
         k: _redact(v, DESCRIPTOR_TEXTS, True) if k == "MenuItems" else rest[k]
