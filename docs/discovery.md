@@ -623,3 +623,56 @@ Dazwischen beantwortete das Portal zweimal `UpdateSession` mit HTTP 429 (21:07, 
 2. Kommt eine Seite ohne Formular und ohne Code, verwirft der Client seine Cookies und ruft `/connect/authorize` genau einmal neu auf.
 3. Bleibt es dabei, nennt die Fehlermeldung HTTP-Status, Pfad und Seitentitel (ohne Query-String). Damit lässt sich der nächste Ausfall eindeutig zuordnen.
 4. HTTP 429 auf `UpdateSession` allein löst keinen Backoff mehr aus; `wolf-comm` wertet die Antwort gar nicht aus.
+
+## 17. Nachtrag 2026-11-21: Störmeldungs-Endpunkte im Portal-JavaScript
+
+Quelle: Backlog-Brief 08, Schritte 1 und 2. Statische Analyse der Portal-Startseite und des dort eingebundenen Bundles `js/app-all-20261008.min.js` (derselbe Build wie in Abschnitt 1), abgerufen am 2026-11-21 als öffentliche, unauthentifizierte GETs. Das ebenfalls eingebundene Angular-Bundle `angular/system-list/browser/main-*.js` enthält keine Störmeldungs-Aufrufe. Gegen die Wolf-API wurde **nichts** gesendet, kein Login. Alle Zitate unten sind wörtlich aus dem minifizierten Code (Variablennamen vom Minifier).
+
+### 17.1 URL und HTTP-Methode [Code]
+
+Jeder Aufruf geht über `comm.getAsync`/`comm.postAsync` mit einem Index aus `LuConViewModel.Communication.FuncType`; der Index wählt den Eintrag in `MetaInfo`, daraus wird die URL gebaut:
+
+```js
+GetUrl=function(e){var t,e=LuConViewModel.Communication.MetaInfo[e];return e.isAsset?e.name:(t=globalConfig.getApiUrl(),e.path?t+=e.path:t+="api/portal",t+"/"+e.name)}
+```
+
+Kein Störmeldungs-Eintrag hat ein eigenes `path`, alle liegen also unter `/portal/api/portal/<name>`. `getAsync` sendet `GET` mit dem DTO als Query-String, `postAsync` sendet `POST` mit dem DTO als JSON-Body (`"POST"!==r&&"PUT"!==r||(n="application/json; charset=utf-8")`, `null!=u&&"GET"!=r?JSON.stringify(u):u`). Wichtig: Für `FuncType.CreateFaultMessageDestination` (3) und `UpdateFaultMessageDestination` (31) steht in `MetaInfo` der Name mit Suffix `V2`, die URL endet also auf `…V2`. `doRequest` fügt keine `SessionId` hinzu; die DTOs unten sind vollständig.
+
+### 17.2 Endpunkte
+
+| FuncType | Methode, Pfad | Payload | Lesen/Schreiben | Aufrufkontext |
+|---|---|---|---|---|
+| `ReadFaultMessages: 25` | `POST /portal/api/portal/ReadFaultMessages` | `{LastRead: null, GatewayId, SystemId}` | **lesend** | Poll alle 10 s, solange eine Anlage geöffnet ist (17.3) |
+| `CommitFaultMessage: 78` | `POST /portal/api/portal/CommitFaultMessage` | `{GatewayId, SystemId, DeviceTemplateId, DeviceIndex}` | **schreibend** (Störung quittieren am Regler) | Button „Störung quittieren“ nach Rückfrage „Wollen Sie fortfahren?“ |
+| `ReadFaultMessageDestinationList: 24` | `GET /portal/api/portal/ReadFaultMessageDestinationList?SystemId=…` | `{SystemId}` | lesend, aber nur Benachrichtigungs-Konfiguration (E-Mail-Adressen) | Menü „Benachrichtigungen“ |
+| `CreateFaultMessageDestination: 3` | `POST /portal/api/portal/CreateFaultMessageDestinationV2` | `{SystemId, Address, CommunicationType, ConnectStateMsg, ErrorMaintenanceFilterMsg}` | schreibend (Konto-Einstellung) | Menü „Benachrichtigungen“, „Hinzufügen“ |
+| `UpdateFaultMessageDestination: 31` | `POST /portal/api/portal/UpdateFaultMessageDestinationV2` | `{Id, SystemId, Address, CommunicationType, ConnectStateMsg, ErrorMaintenanceFilterMsg}` | schreibend (Konto-Einstellung) | dito, Bearbeiten |
+| `DeleteFaultMessageDestination: 6` | `POST /portal/api/portal/DeleteFaultMessageDestination` | `{Id}` | schreibend (löscht) | dito, Löschen |
+
+Belege (wörtlich):
+
+- `{name:"ReadFaultMessages",maxErrorDurationSec:LuConViewModel.Communication.MaxErrorDurationSec,timeoutMs:1e4}` – als einziger Störmeldungs-Endpunkt mit Fehlertoleranz wie `UpdateSession` (Poll-Charakter); `{name:"CommitFaultMessage",maxErrorDurationSec:0,timeoutMs:6e4}`.
+- `readFaultMessages:function(t){var i=this;comm.postAsync(LuConViewModel.Communication.FuncType.ReadFaultMessages,t,function(e){i.handleResponse(t,e)},…`
+- `createReadDto:function(e){return{LastRead:null,GatewayId:e.GatewayId,SystemId:e.Id}}`
+- `t={GatewayId:i.GatewayId,SystemId:i.SystemId,DeviceTemplateId:e.DeviceTemplateId,DeviceIndex:e.DeviceIndex};messagebox.open(wb.getLocalizedText("Wollen Sie fortfahren?"),wb.getLocalizedText("Störung quittieren"),function(){… comm.postAsync(LuConViewModel.Communication.FuncType.CommitFaultMessage,t,…` und danach der Hinweis `"Es kann bis zu 2 Minuten dauern, bis der Regler die Störmeldungen aktualisiert hat!"`
+- `comm.getAsync(LuConViewModel.Communication.FuncType.ReadFaultMessageDestinationList,this.createReadDto(),function(e){t.success(e.OwnItems),i.dataSourceSystemShares.data(e.ForeignItems),…` mit `createReadDto:function(){return{SystemId:this.systemId}}`
+- `createNewDto:function(e){return{SystemId:this.systemId,Address:e.Address,CommunicationType:e.CommunicationType,ConnectStateMsg:e.ConnectStateMsg,ErrorMaintenanceFilterMsg:e.ErrorMaintenanceFilterMsg}},createDeleteDto:function(e){return{Id:e.Id}}`; `FaultMessageCommunicationTypes=[{text:wb.getLocalizedText("E-Mail"),value:0}]`; Spaltentitel von `ErrorMaintenanceFilterMsg`: „Wartungs-/Störungsstatus“.
+
+### 17.3 Aufrufkontext von `ReadFaultMessages` und `DynFaultMessageDevices` [Code]
+
+- Das Portal startet den Poll **beim Öffnen jeder Anlage**, direkt in der Antwort-Verarbeitung von `GetGuiDescriptionForGateway`, nicht erst beim Klick auf den Menüpunkt „Meldungen“: `comm.getAsync(LuConViewModel.Communication.FuncType.GetGuiDescriptionForGateway,n,function(e){… l.systemFaultMessages.activatePolling(s,e.DynFaultMessageDevices,e.SystemHasWRSClassicDevices) …`. Jede normale Portal-Sitzung ruft den Endpunkt also ohnehin auf.
+- Wiederholung: `this.startTimer&&((r=this).timer=setTimeout(function(){r.readFaultMessages(e)},1e4))`; beim Schließen der Anlage `deactivatePolling` (`clearTimeout`).
+- `DynFaultMessageDevices` (aus der Beschreibung, siehe 4.1; auf der Anlage des Eigentümers `[]`) steuert nur die Darstellung: je Eintrag (`DeviceName`, `DeviceTemplateId`, `DeviceIndex`) legt das Portal eine zusätzliche Tabelle „Störmeldehistorie: <DeviceName>“ an und füllt sie aus `DeviceFaultMessages[]` der Antwort, zugeordnet über `DeviceTemplateId + DeviceIndex`. Ist die Liste leer, gibt es keine Gerätetabellen; die Haupttabellen bleiben.
+- `SystemHasWRSClassicDevices` blendet die Tabelle „Meldungshistorie: WRS“ ein (`0==i?$("#system-fault-messages-view-history-grid").hide():…show()`). Auf der Anlage des Eigentümers ist der Wert `true`.
+- Antwortfelder laut `handleResponse` und `deactivatePolling`: `LastRead`, `MessagesChanged`, `CurrentMessages[]`, `HistoryMessages[]`, `GatewayEvents[]`, `CommitFaultMessageEntries[]`, optional `DeviceFaultMessages[]` (je `DeviceTemplateId`, `DeviceIndex`, `HistoryMessages[]`). Die Listen werden nur übernommen, wenn `MessagesChanged` wahr ist.
+- Spalten der Tabellen: „Aktive Meldungen“ (`CurrentMessages`): `OccurTimeLocal` „Eingang“, `ErrorCode` „Störcode“, `Description` „Beschreibung“ (über `wb.getLocalizedText` übersetzt, also ein deutscher Quelltext), `Device` „Gerät“. Historien zusätzlich `OutgoingTimeLocal` „Ausgang“. „Gateway-Meldungen“ (`GatewayEvents`): `ServerTimestampUTC`, Beschreibung aus `Declarations.getGatewayEventTypeDescription(data.EventType, data.Payload)` (u. a. PV-Anhebung und EVU-Sperre über die potentialfreien Kontakte).
+- `CommitFaultMessageEntries[]` (je `DeviceShortName`, `DeviceTemplateId`, `DeviceIndex`) erzeugt den Quittier-Button; sichtbar nur bei `hasCommitableFaultmessages` (`0<t.CommitFaultMessageEntries.length`).
+
+### 17.4 Offene Punkte
+
+- **[Offen]** Inhalt und Format der Antwort auf der echten Anlage: Typ von `ErrorCode` (Zahl oder Text), Format der Zeitstempel, ob `HistoryMessages` ohne aktuelle Störung gefüllt ist, wie weit die Historie zurückreicht.
+- **[Offen]** Bedeutung von `LastRead`. Das Portal sendet immer `LastRead: null`. `handleResponse` schreibt den Rückgabewert in `e.lastRead` (kleines `l`) des DTO-Objekts, das bei den Folge-Polls mitgeschickt wird; ob der Server dieses Feld neben `LastRead: null` auswertet, ist unklar. Mit `LastRead: null` liefert der Server vermutlich den vollen Stand mit `MessagesChanged: true`.
+- **[Offen]** Ob der Server eine `SessionId` im Body erwartet oder toleriert. Das Portal sendet keine; unser Client fügt sie in `_request` jedem JSON-Body hinzu.
+- **[Offen]** Ob `ReadFaultMessages` am Gateway ein Push-Bundle aktiviert oder Last erzeugt. Es nimmt keine `BundleId`; das Risiko aus Abschnitt 3.3 (ungültige BundleId) betrifft diesen Aufruf daher nicht.
+- **Nicht aufrufen:** `CommitFaultMessage` quittiert eine Störung am Regler; `Create…V2`, `Update…V2` und `DeleteFaultMessageDestination` ändern die E-Mail-Benachrichtigungen des Kontos. `ReadFaultMessageDestinationList` liest nur diese Konfiguration (E-Mail-Adressen) und ist für das Ziel des Briefs nicht nötig.
+- Schritt 3 (eine einzige Lese-Anfrage an `ReadFaultMessages`) wartet auf die Freigabe des Eigentümers.
