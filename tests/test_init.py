@@ -259,7 +259,7 @@ async def test_unreadable_value_is_isolated(
 
     coordinator = mock_config_entry.runtime_data.coordinators[1234]
     assert coordinator.unreadable == {bad}
-    assert f"Value {bad} of Home cannot be read" in caplog.text
+    assert f"Value {bad} cannot be read" in caplog.text
     assert hass.states.get(_entity_id(hass, "switch", 22004200000)).state == "on"
 
     mock_client.get_values.reset_mock()
