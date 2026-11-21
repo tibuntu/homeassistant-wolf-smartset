@@ -8,7 +8,10 @@
       "3_way_diverter_valve_htg_clg": {"default": "mdi:valve"},
       "electric_booster_heater": {"default": "mdi:heating-coil"},
       "dhw_status": {"default": "mdi:water-boiler"},
-      "mixer_circuit_status": {"default": "mdi:radiator"},
+      "mixer_circuit_status": {
+        "default": "mdi:radiator",
+        "state": {"Heizbetrieb": "mdi:radiator", "AT Abschaltung": "mdi:radiator-off"}
+      },
       "mixer_circuit_demand": {"default": "mdi:radiator"},
       "mkp_mixer_circuit_pump": {"default": "mdi:pump"},
       "mixer_circuit_pump": {"default": "mdi:pump"},
