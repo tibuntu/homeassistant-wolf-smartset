@@ -1,8 +1,9 @@
-"""Write pipeline: every write from entities and undo goes through here (ADR-Writes-013).
+"""Write pipeline: every write from entities and undo goes through here (ADR-Writes-013, -018).
 
 Order: writable check, validation, then under one lock: no-op check, dry run,
-rate limit, API call, optimistic state, history. The first poll that reads the
-value at least CONFIRM_AFTER_SECONDS after the write confirms or corrects it.
+rate limit, API call, optimistic state, history. The first poll at least
+CONFIRM_AFTER_SECONDS after the write that reads the written value confirms it;
+another value corrects it only once the settle window has passed.
 """
 
 import asyncio
@@ -38,6 +39,13 @@ STORAGE_VERSION = 1
 HISTORY_LIMIT = 200
 # A value read earlier than this after the write may predate the controller's update.
 CONFIRM_AFTER_SECONDS = 30
+# A mismatch is final only once max(SETTLE_POLLS poll intervals, SETTLE_SECONDS) have passed.
+# Measured 2026-11-18 at a 120 s interval: the DHW setpoint read the old value 100 s and
+# 120 s after the write and the new one only 220 s and 240 s after it. 300 s covers that
+# with margin at the shortest allowed interval (60 s); two intervals keep at least one more
+# poll after a stale one in case the portal's delay is tied to polls rather than to time.
+SETTLE_POLLS = 2
+SETTLE_SECONDS = 300
 # AccessLevel of the portal needed for user-level writes (expert parameters are read-only).
 ACCESS_USER_WRITE = 2
 
@@ -250,7 +258,7 @@ class WriteManager:
             if entity is not None:
                 entity.async_write_ha_state()
             self._pending[(coordinator.system.id, parameter.value_id)] = (now, record)
-            record["confirmed"] = None  # set by the first poll after CONFIRM_AFTER_SECONDS
+            record["confirmed"] = None  # set by async_check_pending
             return await self._record(record, RESULT_OK)
 
     @callback
@@ -258,28 +266,36 @@ class WriteManager:
         """After a poll: keep, confirm or correct written values.
 
         A poll that started before the write or runs right after it may still
-        carry the old value; until CONFIRM_AFTER_SECONDS have passed the written
-        value is put back. Runs before the entities' listeners, so they never
-        show the stale value.
+        carry the old value, and the portal may show some values minutes late.
+        The first poll after CONFIRM_AFTER_SECONDS that reads the written value
+        confirms it; a different value is final only after the settle window,
+        until then the written value is put back. Runs before the entities'
+        listeners, so they never show the stale value.
         """
         if not coordinator.last_update_success or coordinator.data is None:
             return
         changed = False
         now = time.monotonic()
+        interval = (coordinator.update_interval or timedelta()).total_seconds()
+        settle = max(SETTLE_POLLS * interval, SETTLE_SECONDS)
         for key in [k for k in self._pending if k[0] == coordinator.system.id]:
             written_at, record = self._pending[key]
             value_id = key[1]
-            if now - written_at < CONFIRM_AFTER_SECONDS or value_id not in coordinator.polled:
+            parameter = coordinator.description.parameters.get(record["parameter_id"])
+            current = coordinator.data.get(value_id)
+            confirmed = parameter is not None and same_value(parameter, current, record["new"])
+            age = now - written_at
+            if (
+                age < CONFIRM_AFTER_SECONDS
+                or value_id not in coordinator.polled
+                or (not confirmed and age < settle)
+            ):
                 coordinator.data[value_id] = record["new"]
                 continue
             del self._pending[key]
-            parameter = coordinator.description.parameters.get(record["parameter_id"])
-            current = coordinator.data.get(value_id)
             record["read_back"] = current
-            record["confirmed"] = parameter is not None and same_value(
-                parameter, current, record["new"]
-            )
-            if record["confirmed"]:
+            record["confirmed"] = confirmed
+            if confirmed:
                 self._fire(RESULT_CONFIRMED, record)
             else:
                 record["result"] = RESULT_NOT_APPLIED

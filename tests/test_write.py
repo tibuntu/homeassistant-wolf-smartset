@@ -226,16 +226,17 @@ async def test_next_poll_confirms_or_corrects(
     read_back: str,
     result: str,
 ) -> None:
-    """The poll after the write either confirms the value or restores the real one."""
+    """Later polls either confirm the value or, after the settle window, restore the real one."""
     await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
     await _set_setpoint(hass, 55)
 
     mock_client.get_values.side_effect = lambda system, bundle, ids, first=False: [
         Value(i, read_back if i == DHW_SETPOINT else "0", 1) for i in ids
     ]
-    freezer.tick(timedelta(seconds=120))
-    async_fire_time_changed(hass)
-    await hass.async_block_till_done()
+    for _ in range(3):  # 360 s: past the 300 s settle window at the default 120 s interval
+        freezer.tick(timedelta(seconds=120))
+        async_fire_time_changed(hass)
+        await hass.async_block_till_done()
 
     record = _history(mock_config_entry)[-1]
     assert (record["result"], record["confirmed"], record["read_back"]) == (
@@ -382,6 +383,107 @@ async def test_confirmation_waits_for_the_threshold(
     await coordinator.async_refresh()
     await hass.async_block_till_done()
     assert _history(mock_config_entry)[-1]["confirmed"] is True
+
+
+def _portal_reads(mock_client: MagicMock, setpoint: str) -> None:
+    mock_client.get_values.side_effect = lambda system, bundle, ids, first=False: [
+        Value(i, setpoint if i == DHW_SETPOINT else "0", 1) for i in ids
+    ]
+
+
+async def _poll_after(
+    hass: HomeAssistant, entry: MockConfigEntry, freezer: FrozenDateTimeFactory, seconds: int
+) -> str:
+    """Advance the clock, poll once, return the setpoint entity's state."""
+    freezer.tick(timedelta(seconds=seconds))
+    await entry.runtime_data.coordinators[1234].async_refresh()
+    await hass.async_block_till_done()
+    return hass.states.get(_entity_id(hass, "number", DHW_SETPOINT)).state
+
+
+async def test_late_portal_value_is_confirmed(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Measured 2026-11-18: the first poll (100 s) still reads the old value, the next the new."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    seen: list[str] = []
+    mock_config_entry.runtime_data.writer.async_add_event_listener(
+        lambda result, record: seen.append(result)
+    )
+    await _set_setpoint(hass, 60)
+
+    assert await _poll_after(hass, mock_config_entry, freezer, 100) == "60.0"  # portal: 50
+    _portal_reads(mock_client, "60")
+    assert await _poll_after(hass, mock_config_entry, freezer, 120) == "60.0"
+
+    assert seen == ["ok", "confirmed"]
+    record = _history(mock_config_entry)[-1]
+    assert (record["result"], record["confirmed"], record["read_back"]) == ("ok", True, "60")
+    assert "did not apply" not in caplog.text
+
+
+async def test_unchanged_value_is_not_applied_after_settle_window(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Polls within the window keep the written value; the first one after it decides once."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    seen: list[str] = []
+    mock_config_entry.runtime_data.writer.async_add_event_listener(
+        lambda result, record: seen.append(result)
+    )
+    await _set_setpoint(hass, 60)  # the portal keeps reading 50
+
+    assert await _poll_after(hass, mock_config_entry, freezer, 120) == "60.0"
+    assert await _poll_after(hass, mock_config_entry, freezer, 120) == "60.0"
+    assert _history(mock_config_entry)[-1]["confirmed"] is None
+    assert await _poll_after(hass, mock_config_entry, freezer, 120) == "50.0"  # 360 s
+    assert await _poll_after(hass, mock_config_entry, freezer, 120) == "50.0"
+
+    assert seen == ["ok", "not_applied"]
+    record = _history(mock_config_entry)[-1]
+    assert (record["result"], record["confirmed"], record["read_back"]) == (
+        "not_applied",
+        False,
+        "50",
+    )
+    assert caplog.text.count("did not apply") == 1
+
+
+async def test_second_write_replaces_the_pending_one(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """A newer write to the same parameter restarts the wait and is the one that is checked."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    seen: list[str] = []
+    mock_config_entry.runtime_data.writer.async_add_event_listener(
+        lambda result, record: seen.append(result)
+    )
+    await _set_setpoint(hass, 55)
+    assert await _poll_after(hass, mock_config_entry, freezer, 100) == "55.0"  # portal: 50
+    await _set_setpoint(hass, 57)
+    assert _history(mock_config_entry)[-1]["old"] == "55"
+
+    # 250 s after the first write, 150 s after the second: neither decides yet.
+    assert await _poll_after(hass, mock_config_entry, freezer, 150) == "57.0"
+    _portal_reads(mock_client, "57")
+    assert await _poll_after(hass, mock_config_entry, freezer, 120) == "57.0"
+
+    assert seen == ["ok", "ok", "confirmed"]
+    first, second = _history(mock_config_entry)[-2:]
+    assert (first["new"], first["confirmed"]) == ("55", None)  # superseded, never checked
+    assert (second["new"], second["confirmed"], second["read_back"]) == ("57", True, "57")
+    assert mock_client.write_value.await_count == 2
 
 
 async def test_dry_runs_and_no_ops_do_not_count(
