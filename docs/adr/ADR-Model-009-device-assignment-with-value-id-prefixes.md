@@ -12,7 +12,7 @@ Superseded by [ADR-Model-010](ADR-Model-010-device-assignment-from-data-evidence
 
 This ADR supersedes ADR-Model-007. That ADR created one HA device per expert submenu and assigned a parameter, in this order, to the submenu where its `ParameterId` appears, to the submenu most associated with its `ProtGrp`, or to the system device.
 
-In the running v0.1.0, the most important user-level controls ended up on the system device ("Zuhause"), because they appear only in user tabs: Programmwahl Heizung and Warmwasser, Warmwassersolltemperatur eingestellt, Sollwertkorrektur, 1x Warmwasser and Warmwasser Status. The overview schema entries had no device either.
+In the running v0.1.0, the most important user-level controls ended up on the system device (named after the system), because they appear only in user tabs: Programmwahl Heizung and Warmwasser, Warmwassersolltemperatur eingestellt, Sollwertkorrektur, 1x Warmwasser and Warmwasser Status. The overview schema entries had no device either.
 
 We analysed the owner's recorded description (288 parameters). The leading digits of a `ValueId` (`ValueId // 10^9`) correlate with the device:
 
