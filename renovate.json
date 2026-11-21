@@ -3,22 +3,15 @@
   "extends": [
     "github>tibuntu/renovate-presets",
     "github>tibuntu/renovate-presets:automerge",
+    "github>tibuntu/renovate-presets:groupDevDependencies",
     "github>tibuntu/renovate-presets:semanticCommitType(*, build)",
     "github>tibuntu/renovate-presets:githubActionsCommitType"
   ],
-  "pre-commit": {
-    "enabled": true
-  },
   "lockFileMaintenance": {
     "enabled": true,
     "schedule": ["on sunday"]
   },
   "packageRules": [
-    {
-      "matchFileNames": ["pyproject.toml"],
-      "semanticCommitScope": "deps",
-      "groupName": "dev dependencies"
-    },
     {
       "matchUpdateTypes": ["patch"],
       "groupName": "patch updates",
