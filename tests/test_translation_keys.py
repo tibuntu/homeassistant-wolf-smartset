@@ -12,6 +12,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.wolf_smartset.const import DOMAIN
 from custom_components.wolf_smartset.model import PLATFORMS, Kind, Parameter, parse_description
 from custom_components.wolf_smartset.translation_keys import TRANSLATION_KEYS
+from custom_components.wolf_smartset.write import EVENT_TYPES
 
 from .conftest import FIXTURES
 from .test_model import _descriptors
@@ -19,6 +20,8 @@ from .test_model import _descriptors
 COMPONENT = FIXTURES.parent.parent / "custom_components" / "wolf_smartset"
 # hassfest: [a-z0-9-_]+, no leading or trailing hyphen or underscore
 KEY_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-_]*[a-z0-9])?$")
+# Keys outside TRANSLATION_KEYS: the undo button and the write-result event.
+EXTRA = {("button", "undo"), ("event", "write")}
 CURATED = {
     (platform, key) for platform, table in TRANSLATION_KEYS.items() for key in table.values()
 }
@@ -104,16 +107,33 @@ def test_translations_name_every_key_and_nothing_else(description: dict[str, Any
             (platform, key)
             for platform, keys in translations.items()
             for key in keys
-            if (platform, key) != ("button", "undo")
+            if (platform, key) not in EXTRA
         }
         assert named == CURATED
         for platform, keys in translations.items():
             for key, entry in keys.items():
+                if (platform, key) in EXTRA:
+                    continue
                 assert set(entry) == {"name"}, (platform, key)
                 assert entry["name"] == entry["name"].strip(), (platform, key)
     for platform, table in TRANSLATION_KEYS.items():
         for parameter_id, key in table.items():
             assert de[platform][key]["name"] == parameters[parameter_id].label
+
+
+def test_event_states_name_every_event_type() -> None:
+    """Each event type has a translated state in all three files; German is not English."""
+    names = {}
+    for name in ("strings.json", "translations/en.json", "translations/de.json"):
+        write = _entity_translations(name)["event"]["write"]
+        states = write["state_attributes"]["event_type"]["state"]
+        assert set(states) == set(EVENT_TYPES), name
+        names[name] = (write["name"], states)
+    assert names["strings.json"] == names["translations/en.json"]
+    en_name, en_states = names["translations/en.json"]
+    de_name, de_states = names["translations/de.json"]
+    assert de_name != en_name
+    assert all(de_states[t] != en_states[t] for t in EVENT_TYPES)
 
 
 async def test_registry_keeps_entity_ids_and_gets_translation_keys(
@@ -151,8 +171,13 @@ async def test_registry_keeps_entity_ids_and_gets_translation_keys(
     assert unique_ids == {f"1234_{p.parameter_id}" for p in mapped} | {
         "1234_undo",
         "1234_connectivity",
+        "1234_write",
     }
-    keyed = {e.unique_id for e in entries if e.translation_key and e.unique_id != "1234_undo"}
+    keyed = {
+        e.unique_id
+        for e in entries
+        if e.translation_key and e.unique_id not in ("1234_undo", "1234_write")
+    }
     assert keyed == {f"1234_{p.parameter_id}" for p in mapped if p.translation_key}
 
     exhaust = registry.async_get_entity_id("sensor", DOMAIN, "1234_27004300001")

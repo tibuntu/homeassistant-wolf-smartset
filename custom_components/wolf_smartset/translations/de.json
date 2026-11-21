@@ -107,6 +107,23 @@
         "name": "Letzte Änderung rückgängig"
       }
     },
+    "event": {
+      "write": {
+        "name": "Schreibergebnis",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "ok": "Gesendet",
+              "confirmed": "Bestätigt",
+              "not_applied": "Nicht übernommen",
+              "dry_run": "Probelauf",
+              "rate_limited": "Schreiblimit erreicht",
+              "error": "Fehler"
+            }
+          }
+        }
+      }
+    },
     "number": {
       "day_temperature_heating": {
         "name": "Tagtemperatur (Heizung) (Gemeinsame Einstellungen)"

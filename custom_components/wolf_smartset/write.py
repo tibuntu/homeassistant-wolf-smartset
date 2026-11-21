@@ -46,6 +46,16 @@ RESULT_DRY_RUN = "dry_run"
 RESULT_RATE_LIMITED = "rate_limited"
 RESULT_ERROR = "error"
 RESULT_NOT_APPLIED = "not_applied"
+RESULT_CONFIRMED = "confirmed"  # event only; the history keeps ok with confirmed: true
+# Event types of the write-result entity; unchanged fires nothing (logbook noise).
+EVENT_TYPES = (
+    RESULT_OK,
+    RESULT_CONFIRMED,
+    RESULT_NOT_APPLIED,
+    RESULT_DRY_RUN,
+    RESULT_RATE_LIMITED,
+    RESULT_ERROR,
+)
 
 # Keys of portal responses that identify the installation, the account or the session:
 # the identifier fields plus the personal fields scripts/record_fixtures.py redacts.
@@ -153,6 +163,7 @@ class WriteManager:
         self._lock = asyncio.Lock()
         self._pending: dict[tuple[int, int], tuple[float, dict[str, Any]]] = {}
         self._listeners: list[Callable[[], None]] = []
+        self._event_listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self.history: list[dict[str, Any]] = []
 
     @property
@@ -191,6 +202,14 @@ class WriteManager:
         """Notify entities (undo button) when the history changes."""
         self._listeners.append(update)
         return lambda: self._listeners.remove(update)
+
+    @callback
+    def async_add_event_listener(
+        self, handle: Callable[[str, dict[str, Any]], None]
+    ) -> Callable[[], None]:
+        """Pass every write result with its record (event entity)."""
+        self._event_listeners.append(handle)
+        return lambda: self._event_listeners.remove(handle)
 
     async def async_write(
         self,
@@ -295,7 +314,9 @@ class WriteManager:
             record["confirmed"] = parameter is not None and same_value(
                 parameter, current, record["new"]
             )
-            if not record["confirmed"]:
+            if record["confirmed"]:
+                self._fire(RESULT_CONFIRMED, record)
+            else:
                 record["result"] = RESULT_NOT_APPLIED
                 LOGGER.warning(
                     "%s was written as %s but reads %s: the controller did not apply it",
@@ -303,6 +324,7 @@ class WriteManager:
                     record["new"],
                     current,
                 )
+                self._fire(RESULT_NOT_APPLIED, record)
             changed = True
         if changed:
             self._store.async_delay_save(self._data, 1)
@@ -334,11 +356,17 @@ class WriteManager:
         record["result"] = result
         self.history = [*self.history, record][-HISTORY_LIMIT:]
         await self._store.async_save(self._data())
+        if result in EVENT_TYPES:
+            self._fire(result, record)
         self._notify()
         return record
 
     def _data(self) -> dict[str, Any]:
         return {"history": self.history}
+
+    def _fire(self, result: str, record: dict[str, Any]) -> None:
+        for handle in list(self._event_listeners):
+            handle(result, record)
 
     def _notify(self) -> None:
         for update in list(self._listeners):
