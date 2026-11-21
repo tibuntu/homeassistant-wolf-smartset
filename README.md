@@ -271,6 +271,26 @@ Replace the `*.wolf_*` entity IDs with the IDs of your entities (find them by th
 
 A card whose entity does not exist on your installation shows "Entity not found"; delete that card. The number, switch and select tiles write to the controller's EEPROM like any other write ([Writing](#writing)).
 
+### Blueprint: hot water charge on PV surplus
+
+The blueprint turns on "1x Warmwasser" (`one_time_dhw_charge`) once per PV surplus episode. It never turns the switch off: the controller ends the charge itself, in the measurement after about 16 minutes ([discovery](docs/discovery.md), sections 14 and 15). The controller's weekly program stays the baseline; this is an exception on top of it.
+
+[![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fraw.githubusercontent.com%2Ftibuntu%2Fhomeassistant-wolf-smartset%2Fmain%2Fblueprints%2Fautomation%2Fwolf_smartset%2Fdhw_charge_on_pv_surplus.yaml)
+
+HACS installs only the integration, so import the blueprint with the badge. The automation starts when the surplus has stayed above the threshold for the hold time (one start per crossing) and then checks the conditions below. Inputs:
+
+| Input | Default | Meaning |
+|---|---|---|
+| PV surplus power | none | Power sensor in W, positive when power is fed into the grid. |
+| Surplus threshold | 1500 W | Surplus that starts the charge. |
+| Hold time | 10 min | How long the surplus must stay above the threshold. |
+| Hot water temperature | none | Temperature sensor of the tank. |
+| Hot water temperature limit | 45 °C | No charge at or above this temperature. |
+| Cooldown | 180 min | Minimum time since the last run of the automation. |
+| One-time hot water charge switch | none | The "1x Warmwasser" switch (only switches of this integration are offered). |
+
+The conditions are: hot water temperature below the limit, the switch is off, and the last run is longer ago than the cooldown. Every run is a write to the controller ([Writing](#writing)); with dry run on, the default, the automation runs, nothing reaches the heat pump and the switch snaps back. Switch dry run off only when you want real charges.
+
 ## Removal
 
 Settings › Devices & services › Wolf SmartSet › three-dot menu › *Delete*. This removes the entry, its devices and entities. The write history `.storage/wolf_smartset.<entry_id>.history` stays behind; delete it by hand if you want it gone. Re-enable the core "Wolf SmartSet Service" integration afterwards if you still need it.

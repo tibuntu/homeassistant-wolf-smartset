@@ -55,14 +55,14 @@ rules:
     status: exempt
     comment: Cloud account, nothing to discover locally.
   docs-data-update: done
-  docs-examples: todo
+  docs-examples: done
   docs-known-limitations: done
   docs-supported-devices:
     status: todo
     comment: Only one tested installation is named; no list of supported controllers.
   docs-supported-functions: done
   docs-troubleshooting: done
-  docs-use-cases: todo
+  docs-use-cases: done
   dynamic-devices:
     status: todo
     comment: Systems added to the account later are not picked up without a new entry.
