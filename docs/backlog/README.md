@@ -4,7 +4,6 @@ One brief per finding of the feature research of 2026-11-20 (integration 0.6.1, 
 
 | # | Brief | Status | Size |
 |---|---|---|---|
-| 03 | [PV-surplus DHW blueprint](03-pv-surplus-dhw-blueprint.md) | ready | small |
 | 04 | [Fixture-grade diagnostics](04-fixture-grade-diagnostics.md) | ready | medium |
 | 07 | [Registry cleanup on platform change](07-registry-cleanup-on-platform-change.md) | ready | small |
 | 08 | [Fault-message endpoints](08-fault-message-endpoints.md) | step 3 approved by the owner 2026-11-21 (one ReadFaultMessages call, no SessionId); waits for the owner to run `record_fixtures.py --faults` | investigation |
