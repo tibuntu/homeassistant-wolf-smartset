@@ -8,6 +8,7 @@ from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.wolf_smartset.model import Kind, parse_description
+from custom_components.wolf_smartset.redact import REDACTED
 
 from .conftest import DESCRIPTION, FIXTURES
 
@@ -90,3 +91,32 @@ async def test_disabled_by_default_on_new_installation(
     # The tab parameter stays enabled, its schema duplicate does not.
     assert entries[4007000001].disabled_by is None
     assert parameters[4000100001].duplicate_of == 4007000001
+
+
+def test_fault_messages_shape() -> None:
+    """ReadFaultMessages: no current fault, a history of numeric codes with Wolf texts."""
+    faults = _load("fault_messages.json")
+    assert faults["SystemName"] == REDACTED
+    assert faults["CurrentMessages"] == []
+    history = faults["HistoryMessages"]
+    assert [(m["ErrorCode"], m["Description"]) for m in history] == [
+        (107, "Druck Heizkreis"),
+        (119, "Abtauenergie"),
+        (107, "Druck Heizkreis"),
+        (107, "Druck Heizkreis"),
+        (118, "PCB unterbr."),
+    ]
+    assert [m["Index"] for m in history] == list(range(5))
+    assert not any(m["Active"] for m in history)
+    assert all(m["Device"] == REDACTED and "OutgoingTimeLocal" in m for m in history)
+    # The portal may leave out the time a fault came in.
+    assert sum("OccurTimeLocal" not in m for m in history) == 1
+    assert set(faults["SystemMaintenanceState"]) == {
+        "Mode",
+        "Date",
+        "Progress",
+        "CWLFilterMaintenancePending",
+    }
+    assert faults["MessagesChanged"] is True
+    for empty in ("DeviceFaultMessages", "CommitFaultMessageEntries", "GatewayEvents"):
+        assert faults[empty] == []

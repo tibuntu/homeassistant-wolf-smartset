@@ -1,0 +1,67 @@
+{
+  "SystemId": 1234,
+  "SystemName": "**REDACTED**",
+  "MessagesChanged": true,
+  "LastRead": "2026-11-21T14:19:21.5658752Z",
+  "CurrentMessages": [],
+  "HistoryMessages": [
+    {
+      "Id": 1234,
+      "ErrorCode": 107,
+      "Description": "Druck Heizkreis",
+      "OccurTimeLocal": "2026-03-09T18:05:18",
+      "OutgoingTimeLocal": "2026-03-09T18:08:19",
+      "Active": false,
+      "Index": 0,
+      "Device": "**REDACTED**"
+    },
+    {
+      "Id": 1234,
+      "ErrorCode": 119,
+      "Description": "Abtauenergie",
+      "OccurTimeLocal": "2026-03-04T13:17:50",
+      "OutgoingTimeLocal": "2026-03-04T13:18:50",
+      "Active": false,
+      "Index": 1,
+      "Device": "**REDACTED**"
+    },
+    {
+      "Id": 1234,
+      "ErrorCode": 107,
+      "Description": "Druck Heizkreis",
+      "OutgoingTimeLocal": "2026-03-04T13:18:50",
+      "Active": false,
+      "Index": 2,
+      "Device": "**REDACTED**"
+    },
+    {
+      "Id": 1234,
+      "ErrorCode": 107,
+      "Description": "Druck Heizkreis",
+      "OccurTimeLocal": "2026-02-24T16:27:30",
+      "OutgoingTimeLocal": "2026-02-24T16:30:32",
+      "Active": false,
+      "Index": 3,
+      "Device": "**REDACTED**"
+    },
+    {
+      "Id": 1234,
+      "ErrorCode": 118,
+      "Description": "PCB unterbr.",
+      "OccurTimeLocal": "2025-11-10T09:48:32",
+      "OutgoingTimeLocal": "2025-11-10T09:50:33",
+      "Active": false,
+      "Index": 4,
+      "Device": "**REDACTED**"
+    }
+  ],
+  "DeviceFaultMessages": [],
+  "CommitFaultMessageEntries": [],
+  "SystemMaintenanceState": {
+    "Mode": 0,
+    "Date": "2026-11-21T01:00:00+01:00",
+    "Progress": 0,
+    "CWLFilterMaintenancePending": false
+  },
+  "GatewayEvents": []
+}
