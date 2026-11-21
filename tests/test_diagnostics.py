@@ -22,6 +22,7 @@ from custom_components.wolf_smartset.redact import (
     FAKE_IDS,
     SECRET_CONTROL_TYPES,
     SECRET_KEYS,
+    redact_description,
     secret_value_ids,
 )
 
@@ -30,9 +31,12 @@ from .conftest import FIXTURES, SEED
 # One name per alternative of redact.SECRET_PARAMETER, on a non-secret control type (6).
 SECRET_NAMES = (
     "ISM Seriennummer",
+    "Seriennr.",
     "Serial number",
     "MAC Adresse",
     "IP Adresse",
+    "IP-Adresse",
+    "IPAdresse",
     "Gateway",
     "DNS Server",
     "Subnetzmaske",
@@ -101,11 +105,12 @@ async def test_no_planted_marker_leaks(
 ) -> None:
     """A marker in every field class the redaction covers; none reaches the file.
 
-    Classes: each identifier key (fake-ID keys and personal fields) at the top level
-    of the description, in its fault device list, in a tab under MenuItems (where only
-    the descriptor texts Name and Description stay) and in a write response; each
-    secret control type; each name the secret pattern matches; the system and gateway
-    IDs, the share ID and the system name; username and password.
+    Classes: each identifier key (fake-ID keys and personal fields), as listed and in
+    camelCase, lower and upper case, at the top level of the description, in its fault
+    device list, in a tab under MenuItems (where only the descriptor texts Name and
+    Description stay) and in a write response; an editable group title; each secret
+    control type; each name the secret pattern matches; the system and gateway IDs, the
+    share ID and the system name; username and password.
     """
     markers: list[str] = []
     numbers: list[int] = [SYSTEM_ID, GATEWAY_ID]
@@ -119,14 +124,24 @@ async def test_no_planted_marker_leaks(
         return numbers[-1]
 
     def identifiers(where: str, keep: frozenset[str] = frozenset()) -> dict[str, Any]:
-        return {key: number() for key in FAKE_IDS} | {
-            key: mark(f"{where}-{key}") for key in SECRET_KEYS - keep
+        # Each key as listed, in camelCase, lower and upper case: the portal mixes DTO styles.
+        def casings(key: str) -> set[str]:
+            return {key, key[0].lower() + key[1:], key.lower(), key.upper()}
+
+        return {k: number() for key in FAKE_IDS for k in casings(key)} | {
+            k: mark(f"{where}-{k}")
+            for key in SECRET_KEYS
+            for k in casings(key)
+            if k.casefold() not in keep
         }
 
     description.update(identifiers("top"))
     description["DynFaultMessageDevices"] = [identifiers("fault-device")]
     tab = description["MenuItems"][0]["TabViews"][0]
     tab.update(identifiers("tab", keep=DESCRIPTOR_TEXTS))
+    tab.setdefault("TabViewGroups", []).append(
+        {"GroupName": mark("editable-group-title"), "IsTitleEditable": True}
+    )
 
     planted: dict[int, str] = {}
 
@@ -215,3 +230,31 @@ async def test_description_round_trip(
     assert comparable(after) == comparable(before)
     assert after.devices == before.devices
     assert len(before.parameters) > 250
+
+
+def test_secret_value_is_blanked_in_every_duplicate() -> None:
+    """A hidden copy (control type 31) of the real date descriptor leaks nothing.
+
+    The real description repeats ValueIds across descriptors (36008500001 as 6 and 31).
+    """
+    description = json.loads((FIXTURES / "real" / "description_0.json").read_text(encoding="utf-8"))
+
+    def lists(node: Any) -> Any:
+        if isinstance(node, list):
+            yield node
+            for item in node:
+                yield from lists(item)
+        elif isinstance(node, dict):
+            for value in node.values():
+                yield from lists(value)
+
+    siblings, date = next(
+        (items, d)
+        for items in lists(description["MenuItems"])
+        for d in items
+        if isinstance(d, dict) and d.get("ControlType") == 9 and d.get("Name") == "Datum"
+    )
+    siblings.append(
+        {"ValueId": date["ValueId"], "Name": "Datum", "ControlType": 31, "Value": "LEAK-dup"}
+    )
+    assert "LEAK-dup" not in json.dumps(redact_description(description))
