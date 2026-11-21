@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.8.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.7.2...v0.8.0) (2026-11-21)
+
+
+### Features
+
+* add fault binary sensor and fault code sensor read every 10 minutes ([06ba279](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/06ba27978341c61f4c39c19e1b1a42d40a2189a4))
+* **api:** read fault messages with the portal's payload, without SessionId ([9c9c6c9](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/9c9c6c90f53b86055866be0b796766731816939b))
+* **diagnostics:** include the last fault response per system, redacted ([d4f26f3](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/d4f26f329947a2bf8b3a20e4da06e141ef93eda9))
+
 ## [0.7.2](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.7.1...v0.7.2) (2026-11-21)
 
 

@@ -1386,7 +1386,7 @@ wheels = [
 
 [[package]]
 name = "homeassistant-wolf-smartset"
-version = "0.7.2"
+version = "0.8.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
