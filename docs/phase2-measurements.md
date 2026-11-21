@@ -63,6 +63,21 @@ Symptom: Warmwassertemperatur "dropped" from 58.2 to 25.5 °C. HA had restarted 
 
 Closing the portal session on HA stop (`CloseSystem`) did not help: the next restart froze again right after the second read. With `GuiIdChanged: true` on every read, the restarts at 04.11. 19:44 and 05.11. 06:19 updated every poll, no gap over 10 minutes and no throttling warning in 15 hours. The expert copy of Außentemperatur (bundle 6300) now updates as often as the user-level copy (94 vs. 93 changes), so the snapshot semantics of 27.10. no longer apply.
 
+## 2026-11-20 – Electricity estimate and COP without an S0 meter (recorder, read-only)
+
+Without an S0 electricity meter the portal reports Verbrauch, JAZ, TAZ and MAZ as 0 (issue #23). The live power sensor carries real values. Window 2026-11-06 to 2026-11-20, 335 hourly statistics rows, poll interval 120 s.
+
+| Entity (translation key) | Observation |
+|---|---|
+| `power_consumption_wp_ehz` | 0.0 to 3.0 kW in 0.1 kW steps, mean 0.546 kW, about 183 kWh |
+| `current_secondary_power` | -15.1 to 15.0 kW (negative during defrost), mean 3.44 kW, about 1153 kWh |
+| `energy_amount_htg` | 29044 to 29898 kWh (+854) |
+| `energy_amount_dhw` | 11380 to 11520 kWh (+140) |
+| `heat_generated_current_year` | +995 kWh |
+
+- **COP:** 994 kWh heat (Wolf's counters, HTG + DHW) / 183 kWh electricity (integrated `power_consumption_wp_ehz`) = about 5.4.
+- **Accuracy:** integrating the thermal power the same way gives 1153 kWh against 994 kWh on Wolf's own counter, 16 % too high. An integrated power sensor is therefore an estimate of ±15 to 20 %.
+
 ## Next measurements (HA test run)
 
 - Logins per day: not logged; only the diagnostics (`login_count`, `last_login`) have them. Availability from the recorder is the proxy (section above).
