@@ -54,7 +54,13 @@ class WolfEntity(CoordinatorEntity[WolfSystemCoordinator]):
         else:
             self._attr_name = parameter.label
         self._attr_entity_registry_enabled_default = parameter.enabled_by_default
-        if parameter.writable and parameter.kind in (Kind.NUMBER, Kind.SELECT):
+        # Curated controls are primary entities, other writable inputs are
+        # configuration (ADR-Model-017).
+        if (
+            parameter.writable
+            and parameter.kind in (Kind.NUMBER, Kind.SELECT)
+            and not parameter.translation_key
+        ):
             self._attr_entity_category = EntityCategory.CONFIG
         if parameter.device:
             self._attr_device_info = DeviceInfo(
