@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
 import hashlib
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Any, override
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
@@ -111,6 +111,8 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
 
     config_entry: WolfConfigEntry
     description: Description
+    # Unredacted GetGuiDescriptionForGateway response; the diagnostics redact it.
+    raw_description: dict[str, Any]
 
     def __init__(
         self, hass: HomeAssistant, entry: WolfConfigEntry, client: WolfClient, system: System
@@ -145,6 +147,7 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
             raise ConfigEntryAuthFailed(str(err)) from err
         except WolfError as err:
             raise UpdateFailed(f"Cannot load the parameter description: {err}") from err
+        self.raw_description = raw
         self.description = parse_description(raw)
         self._description_loaded = dt_util.utcnow()
         # Values embedded in the description seed the entities until the first poll.
@@ -225,7 +228,8 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
 
     async def _refresh_description(self) -> None:
         """Daily reload; a changed parameter set reloads the config entry."""
-        new = parse_description(await self.client.get_description(self.system))
+        raw = await self.client.get_description(self.system)
+        new = parse_description(raw)
         self._description_loaded = dt_util.utcnow()
 
         def shape(description: Description) -> set:
@@ -237,6 +241,7 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
         if shape(new) != shape(self.description):
             LOGGER.info("Parameter description of %s changed, reloading", self.system.name)
             self.hass.config_entries.async_schedule_reload(self.config_entry.entry_id)
+        self.raw_description = raw
         self.description = new
 
     @property
