@@ -3,6 +3,7 @@
 from custom_components.wolf_smartset.redact import (
     REDACTED,
     redact_faults,
+    redact_ids,
     redact_values,
     secret_value_ids,
 )
@@ -69,6 +70,14 @@ def test_redact_faults() -> None:
         "CommitFaultMessageEntries": [{"DeviceShortName": REDACTED, "DeviceIndex": 1}],
         "DeviceFaultMessages": [{"DeviceIndex": 1, "HistoryMessages": [kept]}],
     }
+
+
+def test_system_name_redacted_in_any_casing() -> None:
+    """The ReadFaultMessages response carries the system name at the top level."""
+    raw = {"SystemName": "Haus", "systemName": "Haus", "SYSTEMNAME": "Haus"}
+    blanked = dict.fromkeys(raw, REDACTED)
+    assert redact_faults(raw) == blanked
+    assert redact_ids(raw) == blanked
 
 
 def test_redact_values() -> None:
