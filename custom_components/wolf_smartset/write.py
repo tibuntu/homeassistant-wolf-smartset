@@ -29,6 +29,7 @@ from .const import (
     LOGGER,
 )
 from .model import Kind, Parameter
+from .redact import redact_response
 
 if TYPE_CHECKING:
     from .coordinator import WolfSystemCoordinator
@@ -56,42 +57,6 @@ EVENT_TYPES = (
     RESULT_RATE_LIMITED,
     RESULT_ERROR,
 )
-
-# Keys of portal responses that identify the installation, the account or the session:
-# the identifier fields plus the personal fields scripts/record_fixtures.py redacts.
-_ID_KEYS = frozenset(
-    {
-        "SystemId",
-        "GatewayId",
-        "SessionId",
-        "Id",
-        "SystemShareId",
-        "GatewayUsername",
-        "SerialNumber",
-        "Name",
-        "Description",
-        "Comment",
-        "ContactInformation",
-        "Email",
-        "UserName",
-        "Firstname",
-        "Surname",
-        "Street",
-        "City",
-        "ZipCode",
-        "Phone",
-    }
-)
-REDACTED = "**REDACTED**"
-
-
-def redact_ids(data: Any) -> Any:
-    """Replace identifiers in a portal response so the record can be shared."""
-    if isinstance(data, list):
-        return [redact_ids(item) for item in data]
-    if isinstance(data, dict):
-        return {k: REDACTED if k in _ID_KEYS else redact_ids(v) for k, v in data.items()}
-    return data
 
 
 def format_number(value: float) -> str:
@@ -278,7 +243,7 @@ class WriteManager:
                     translation_key="write_failed",
                     translation_placeholders={"name": parameter.label, "error": str(err)},
                 ) from err
-            record["response"] = redact_ids(response)
+            record["response"] = redact_response(response)
             # Optimistic: show the new value now; the next poll confirms or corrects it.
             if coordinator.data is not None:
                 coordinator.data[parameter.value_id] = target
