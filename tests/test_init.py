@@ -195,7 +195,7 @@ async def test_device_change_keeps_entity(
         "1234_27004800001",
         config_entry=mock_config_entry,
         device_id=system.id,
-        suggested_object_id="zuhause_verdichterfrequenz",
+        suggested_object_id="home_verdichterfrequenz",
     )
 
     await hass.config_entries.async_setup(mock_config_entry.entry_id)
