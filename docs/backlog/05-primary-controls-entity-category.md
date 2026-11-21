@@ -1,6 +1,6 @@
 # 05 – Primary controls out of "Configuration"
 
-Status: needs owner decision (step 1) · Size: one condition plus an ADR · Commit type: `feat:` · Rules: [README](README.md#rules-for-every-brief)
+Status: ready — owner decided 2026-11-21: proposal (drop the category for writable parameters with a translation key) · Size: one condition plus an ADR · Commit type: `feat:` · Rules: [README](README.md#rules-for-every-brief)
 
 ## Why
 
