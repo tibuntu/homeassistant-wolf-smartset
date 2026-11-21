@@ -365,8 +365,12 @@ class WriteManager:
         return {"history": self.history}
 
     def _fire(self, result: str, record: dict[str, Any]) -> None:
+        # A failing listener must not fail a write that was already sent.
         for handle in list(self._event_listeners):
-            handle(result, record)
+            try:
+                handle(result, record)
+            except Exception:
+                LOGGER.exception("Write result listener failed for %s", record["label"])
 
     def _notify(self) -> None:
         for update in list(self._listeners):
