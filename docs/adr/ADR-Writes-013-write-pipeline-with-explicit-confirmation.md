@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. Steps 9 and 10 are amended by [ADR-Writes-018](ADR-Writes-018-read-back-settle-window.md): a mismatch is final only after a settle window, and the hold of step 9 is extended until then.
 
 ## Date
 
