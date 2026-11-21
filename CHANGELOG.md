@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.8.0...v0.8.1) (2026-11-21)
+
+
+### Bug Fixes
+
+* never log in or touch the session from the fault read ([40e8c69](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/40e8c6911caa97d632e53d0d450002a5beb25af7))
+
 ## [0.8.0](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.7.2...v0.8.0) (2026-11-21)
 
 
