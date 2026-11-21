@@ -137,18 +137,40 @@ The table covers a CHA heat pump with BM-2 and MM1 (one mixer circuit). A second
 
 Every write ends up in the non-volatile memory (EEPROM) of the Wolf controller. The integration therefore runs every change through one pipeline ([ADR-Writes-013](docs/adr/ADR-Writes-013-write-pipeline-with-explicit-confirmation.md)):
 
-- **Dry run, on by default.** Changes are only logged at INFO. Switch it off under *Configure* when you have checked the log and want real writes.
+- **Dry run, on by default.** Nothing is sent; the entity snaps back to the old value, the *Write result* event entity fires `dry_run` with the old and new value, and an INFO line is logged. Switch it off under *Configure* when you have checked the events and want real writes.
 - **No-op suppression.** A value that is already set is not sent again.
 - **Validation** against min, max, step and list options from the Wolf description; read-only parameters and accounts without write access are refused.
 - **Rate limit**, 20 writes per hour by default, configurable.
 - **One write at a time.**
 - **Optimistic state with confirmation.** The new value shows immediately. The first poll at least 30 s after the write confirms it (`confirmed: true` in the history) or restores the value the controller reports (`confirmed: false`, a warning in the log).
+- **Write result event.** The *Write result* event entity on the system device fires once per attempt: `ok` (sent to the portal), `confirmed`, `not_applied`, `dry_run`, `rate_limited` or `error`, with the attributes `label`, `parameter_id`, `old`, `new`, `source` (`entity` or `undo`) and `error` when present. A value that is already set fires nothing. Every event shows in the logbook and can trigger an automation.
 - **History** of the last 200 attempts in `.storage/wolf_smartset.<entry_id>.history`, the last 50 in the diagnostics; an **Undo last change** button.
 - **Login backoff.** After a failed login the integration waits five minutes, doubling up to an hour, before it logs in again. The block is stored and survives Home Assistant restarts ([ADR-Client-015](docs/adr/ADR-Client-015-login-backoff-survives-restarts.md)). A wrong password is exempt: it opens the re-authentication prompt instead.
 
 Expert (Fachmann) parameters are read-only. There is no evidence from a real installation yet that the controller applies them without an expert login, and every write would end up in the EEPROM. Wrong user-level settings can still make the system inefficient or uncomfortable. Use at your own risk.
 
 The integration never writes on its own. Writes come from your actions in the UI, from automations and from the undo button.
+
+Example: notify when the controller did not apply a write (replace the entity ID with yours):
+
+```yaml
+automation:
+  - alias: Wolf write not applied
+    triggers:
+      - trigger: state
+        entity_id: event.home_write_result
+    conditions:
+      - condition: state
+        entity_id: event.home_write_result
+        attribute: event_type
+        state: not_applied
+    actions:
+      - action: notify.notify
+        data:
+          message: >-
+            {{ state_attr('event.home_write_result', 'label') }} was written as
+            {{ state_attr('event.home_write_result', 'new') }} but the controller did not apply it.
+```
 
 **Automations.** Let the controller's weekly time programs do the daily switching between comfort and eco, and use Home Assistant for exceptions: "Programmwahl" to *Sparen* while nobody is home, "Zeitprogramm" 2 or 3 for holidays, "1x Warmwasser" on PV surplus, back to *Auto* afterwards. Rebuilding a schedule with automations works, but every switch is a write to the controller, and if Home Assistant or the cloud is down at the switching time the heating stays in the last written mode. The controller's own program keeps running without either.
 
@@ -226,4 +248,4 @@ Settings › Devices & services › Wolf SmartSet › three-dot menu › *Delete
 - **Repair issue "core integration is active"**: disable the core integration for the same account (see Installation).
 - **Re-authentication prompt**: the portal rejected the password. Enter the current one.
 - **Diagnostics**: Settings › Devices & services › Wolf SmartSet › three-dot menu › *Download diagnostics*. The file contains the parsed parameter model, the write history and login statistics, with credentials and identifiers redacted.
-- **A write shows "not applied"**: the controller reported another value after the write. A dependent setting in the controller may limit the parameter.
+- **A write shows "not applied"**: the controller reported another value after the write; the *Write result* event entity fires `not_applied` and a warning is logged. A dependent setting in the controller may limit the parameter.
