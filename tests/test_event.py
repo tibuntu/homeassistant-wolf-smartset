@@ -132,3 +132,32 @@ async def test_no_identifier_in_attributes(
     for value in attributes.values():
         assert str(SYSTEM.id) not in str(value)
         assert str(SYSTEM.gateway_id) not in str(value)
+
+
+async def test_raising_listener_does_not_fail_the_write(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A sent write stays ok and the other listeners still hear about it."""
+    await _setup(hass, mock_config_entry, **{CONF_DRY_RUN: False})
+    writer = mock_config_entry.runtime_data.writer
+
+    def broken(result: str, record: dict[str, Any]) -> None:
+        raise RuntimeError("boom")
+
+    seen: list[str] = []
+    notified: list[bool] = []
+    writer.async_add_event_listener(broken)
+    writer.async_add_event_listener(lambda result, record: seen.append(result))
+    writer.async_add_listener(lambda: notified.append(True))
+
+    await _set_setpoint(hass, 55)
+
+    mock_client.write_value.assert_awaited_once()
+    assert writer.history[-1]["result"] == "ok"
+    assert seen == ["ok"]
+    assert notified
+    _assert_event(hass, "ok")
+    assert "Write result listener failed" in caplog.text
