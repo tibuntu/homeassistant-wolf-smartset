@@ -14,7 +14,7 @@ A `water_heater` entity that combines the DHW temperature (`dhw_temperature`), t
 
 ## Cheaper alternative
 
-Reported, not verified: since Home Assistant 2026.11 the Template integration can create `water_heater` entities. A README recipe that wraps the three entities gives users the card and voice control without code in this integration. It belongs in the "Examples" section of [brief 02](02-energy-and-cop-recipe.md).
+Reported, not verified: since Home Assistant 2026.11 the Template integration can create `water_heater` entities. A README recipe that wraps the three entities gives users the card and voice control without code in this integration. It belongs in the README section "Examples".
 
 ## Revisit when
 

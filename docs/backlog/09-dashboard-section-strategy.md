@@ -11,7 +11,7 @@ The frontend users have today is the third-party [Heat Pump Hydraulic Card](http
 | Gap in the card | What would feed it |
 |---|---|
 | Fault codes (`errors` stays empty) | [brief 08](08-fault-message-endpoints.md) |
-| Electricity counters (0 without an S0 meter) | [brief 02](02-energy-and-cop-recipe.md); a user-made helper has no translation key, so the card needs manual configuration |
+| Electricity counters (0 without an S0 meter) | README section "Examples"; a user-made helper has no translation key, so the card needs manual configuration |
 | Heating circuits beyond the first | [brief 04](04-fixture-grade-diagnostics.md), which brings IDs from other installations |
 | Room temperature | exists as `room_temperature`, disabled by default by design |
 | Buffer temperature | nothing; manual in the card |
