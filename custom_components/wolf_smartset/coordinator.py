@@ -125,7 +125,8 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
             hass,
             LOGGER,
             config_entry=entry,
-            name=f"{DOMAIN} {system.name}",
+            # HA's own debug logs repeat the name; the system name stays out (rule 2).
+            name=DOMAIN,
             update_interval=self._interval,
         )
         self.client = client
@@ -213,11 +214,7 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
             values = await self.client.get_values(self.system, bundle_id, value_ids, first=True)
         except ParameterReadError:
             if len(value_ids) == 1:
-                LOGGER.warning(
-                    "Value %s of %s cannot be read and is skipped from now on",
-                    value_ids[0],
-                    self.system.name,
-                )
+                LOGGER.warning("Value %s cannot be read and is skipped from now on", value_ids[0])
                 self.unreadable.add(value_ids[0])
                 return []
             isolated: list[Value] = []
@@ -252,8 +249,7 @@ class WolfSystemCoordinator(DataUpdateCoordinator[WolfData]):
         self.backoff_steps += 1
         self.update_interval = min(self._interval * 2**self.backoff_steps, MAX_BACKOFF)
         LOGGER.warning(
-            "Wolf SmartSet throttles %s or blocks its login, next poll in %s",
-            self.system.name,
+            "Wolf SmartSet throttles the account or blocks its login, next poll in %s",
             self.update_interval,
         )
         if self.backoff_steps >= BACKOFF_ISSUE_STEPS:
