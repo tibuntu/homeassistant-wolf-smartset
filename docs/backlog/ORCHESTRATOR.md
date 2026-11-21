@@ -30,7 +30,7 @@ Finish with a short report: merged or ready pull requests, open owner questions,
 Stop and ask, never proceed on your own, for:
 
 - any real write to the heating system, including trying a blueprint or automation with dry run off;
-- the first call to an endpoint the integration does not use yet (brief 15, `ReadFaultMessages`);
+- the first call to an endpoint the integration does not use yet (`ReadFaultMessages` has the owner's go since 2026-11-21, [ADR-Polling-019](../adr/ADR-Polling-019-fault-messages-read.md); its `CommitFaultMessage` and `…FaultMessageDestination…` siblings do not);
 - raising the minimum Home Assistant version (brief 10);
 - reopening or commenting on GitHub issues, releases, and anything in the owner's Home Assistant.
 

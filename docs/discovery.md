@@ -738,4 +738,4 @@ Abwägungen:
 - **Unbekannt.** Wie ein aktiver `CurrentMessages`-Eintrag genau aussieht und ob `Active` umspringt (17.6). Der Sensor sollte deshalb nur auf „Liste nicht leer“ und die Felder bauen, die auch die Historie hat, und fehlende Felder (`OccurTimeLocal`) vertragen. Erst eine echte Störung belegt die Annahme.
 - **`SystemMaintenanceState`.** Reicht heute nicht für einen „Wartung fällig“-Sensor: `Mode`, `Progress` und die Rolle von `Date` sind unbelegt. Vorschlag: das Objekt in die Diagnose aufnehmen und erst nach einer fälligen Wartung oder einer Analyse des Portal-JS entscheiden.
 
-Bau ist ein neuer Brief: `docs/backlog/15-fault-sensors.md`. Ob Issue #25 wieder geöffnet wird, entscheidet der Eigentümer.
+Gebaut nach Brief 15 mit Freigabe des Eigentümers vom 2026-11-21 (10-Minuten-Takt, ohne `SessionId`): [ADR-Polling-019](adr/ADR-Polling-019-fault-messages-read.md). Ob Issue #25 wieder geöffnet wird, entscheidet der Eigentümer.
