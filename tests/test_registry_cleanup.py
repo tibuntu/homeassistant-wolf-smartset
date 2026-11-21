@@ -1,7 +1,10 @@
 """Registry entries left behind when a parameter moved to another platform."""
 
+import copy
+from dataclasses import asdict
 from datetime import timedelta
-from unittest.mock import MagicMock
+from typing import Any
+from unittest.mock import MagicMock, patch
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.config_entries import RELOAD_AFTER_UPDATE_DELAY, ConfigEntryState
@@ -10,7 +13,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
-from custom_components.wolf_smartset.const import DOMAIN
+from custom_components.wolf_smartset.api import System
+from custom_components.wolf_smartset.const import CONF_SYSTEMS, DOMAIN
+
+from .conftest import SYSTEM
 
 Disabler = er.RegistryEntryDisabler
 SPARFAKTOR = "1234_36000600001"  # expert number until 0.6.0, sensor since
@@ -33,6 +39,21 @@ def _seed(
 async def _setup(hass: HomeAssistant, entry: MockConfigEntry) -> None:
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
+
+
+def _occurrences(obj: Any, parameter_id: int) -> list[tuple[list, dict]]:
+    """(containing list, descriptor) for every occurrence of a parameter."""
+    found: list[tuple[list, dict]] = []
+    if isinstance(obj, dict):
+        for value in obj.values():
+            found += _occurrences(value, parameter_id)
+    elif isinstance(obj, list):
+        for item in obj:
+            if isinstance(item, dict) and item.get("ParameterId") == parameter_id:
+                found.append((obj, item))
+            else:
+                found += _occurrences(item, parameter_id)
+    return found
 
 
 def _get(hass: HomeAssistant, domain: str, unique_id: str) -> er.RegistryEntry | None:
@@ -77,21 +98,96 @@ async def test_enabled_stale_entry_enables_its_sibling(
     assert state.state != STATE_UNAVAILABLE
 
 
-async def test_sibling_keeps_its_own_customisation(
+async def test_customisation_moves_where_the_sibling_has_none(
     hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
-    """A name the user gave the sibling wins over the stale entry's name."""
+    """Labels, aliases and a user hide move; the sibling's own name wins."""
     mock_config_entry.add_to_hass(hass)
     registry = er.async_get(hass)
     stale = _seed(hass, mock_config_entry, "number", SPARFAKTOR)
-    registry.async_update_entity(stale.entity_id, name="Old", icon="mdi:leaf")
+    registry.async_update_entity(
+        stale.entity_id,
+        name="Old",
+        icon="mdi:leaf",
+        labels={"heating"},
+        aliases=["savings factor"],
+        hidden_by=er.RegistryEntryHider.USER,
+    )
     sibling = _seed(hass, mock_config_entry, "sensor", SPARFAKTOR, Disabler.INTEGRATION)
     registry.async_update_entity(sibling.entity_id, name="New")
     await _setup(hass, mock_config_entry)
 
     sensor = _get(hass, "sensor", SPARFAKTOR)
     assert sensor
-    assert (sensor.name, sensor.icon) == ("New", "mdi:leaf")
+    assert (sensor.name, sensor.icon, sensor.labels) == ("New", "mdi:leaf", {"heating"})
+    assert sensor.aliases == ["savings factor"]
+    assert sensor.hidden_by is er.RegistryEntryHider.USER
+
+
+async def test_kind_flip_of_a_writable_parameter_keeps_its_entity(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    description: dict[str, Any],
+) -> None:
+    """A partial description (IsReadOnly missing) turns a number into a sensor.
+
+    The number is a user-level parameter, so its entry stays with name and entity_id.
+    """
+    for _, item in _occurrences(description, 36002900001):
+        item.pop("IsReadOnly", None)
+    mock_config_entry.add_to_hass(hass)
+    number = _seed(hass, mock_config_entry, "number", "1234_36002900001")
+    er.async_get(hass).async_update_entity(number.entity_id, name="Correction")
+    await _setup(hass, mock_config_entry)
+
+    assert _get(hass, "sensor", "1234_36002900001")  # the flip happened
+    kept = _get(hass, "number", "1234_36002900001")
+    assert kept
+    assert (kept.entity_id, kept.name) == (number.entity_id, "Correction")
+
+
+async def test_each_entry_is_judged_by_its_own_system(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    description: dict[str, Any],
+) -> None:
+    """The second system lacks Sparfaktor, so its number stays."""
+    cabin = System(4321, 8765, "Cabin", None)
+    cabin_description = copy.deepcopy(description)
+    for occurrences, item in _occurrences(cabin_description, 36000600001):
+        occurrences.remove(item)
+    mock_client.get_description.side_effect = lambda system: (
+        cabin_description if system.id == cabin.id else description
+    )
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=mock_config_entry.unique_id,
+        data={**mock_config_entry.data, CONF_SYSTEMS: [asdict(SYSTEM), asdict(cabin)]},
+    )
+    entry.add_to_hass(hass)
+    for unique_id in (SPARFAKTOR, "4321_36000600001"):
+        _seed(hass, entry, "number", unique_id)
+        _seed(hass, entry, "sensor", unique_id, Disabler.INTEGRATION)
+    await _setup(hass, entry)
+
+    assert _get(hass, "number", SPARFAKTOR) is None
+    assert _get(hass, "number", "4321_36000600001")
+
+
+async def test_no_sibling_no_removal(
+    hass: HomeAssistant, mock_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    """Without a sensor entry the stale number stays (safety check)."""
+    mock_config_entry.add_to_hass(hass)
+    _seed(hass, mock_config_entry, "number", SPARFAKTOR)
+    with patch("custom_components.wolf_smartset.sensor.add_entities"):
+        await _setup(hass, mock_config_entry)
+
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+    assert _get(hass, "sensor", SPARFAKTOR) is None
+    assert _get(hass, "number", SPARFAKTOR)
 
 
 async def test_disabled_stale_entry_and_user_disabled_sibling(
