@@ -1,6 +1,7 @@
 """Wolf SmartSet (read/write) integration."""
 
 from functools import partial
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import (
@@ -10,10 +11,14 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import Event, HomeAssistant
-from homeassistant.helpers import device_registry as dr, issue_registry as ir
+from homeassistant.helpers import (
+    device_registry as dr,
+    entity_registry as er,
+    issue_registry as ir,
+)
 
 from .api import System, WolfClient
-from .const import CONF_SYSTEMS, DOMAIN
+from .const import CONF_SYSTEMS, DOMAIN, LOGGER
 from .coordinator import (
     WolfConfigEntry,
     WolfRuntimeData,
@@ -22,6 +27,7 @@ from .coordinator import (
     create_http_client,
 )
 from .entity import system_device_info
+from .model import PLATFORMS as MODEL_PLATFORMS
 from .write import WriteManager
 
 PLATFORMS = [
@@ -85,6 +91,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> bool
     entry.async_on_unload(hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _close_session))
     entry.runtime_data = WolfRuntimeData(http, client, coordinators, writer)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _remove_stale_entities(hass, entry)
     # The first refresh ran before any entity was listening; poll the enabled
     # parameters now instead of waiting a full interval with unknown states.
     for coordinator in coordinators.values():
@@ -99,6 +106,48 @@ async def async_unload_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> boo
         await entry.runtime_data.client.close()
         await entry.runtime_data.http.aclose()
     return unloaded
+
+
+def _remove_stale_entities(hass: HomeAssistant, entry: WolfConfigEntry) -> None:
+    """Drop entries left behind when a parameter moved to another platform.
+
+    An entry is stale only when the current description maps its parameter to another
+    platform and an entry with the same unique ID exists there. Anything else stays,
+    including parameters missing from the description: a short portal problem must not
+    delete the user's names and settings. The user's name, icon and area move to the
+    sibling, and an enabled stale entry enables a sibling the integration disabled
+    (never one the user disabled). Enabling makes HA reload the entry ~30 s later;
+    the stale entry is gone by then, so the reload finds nothing to do.
+    """
+    registry = er.async_get(hass)
+    coordinators = entry.runtime_data.coordinators
+    for stale in er.async_entries_for_config_entry(registry, entry.entry_id):
+        system_id, _, parameter_id = stale.unique_id.partition("_")
+        if not (system_id.isdigit() and parameter_id.isdigit()):
+            continue  # undo, connectivity, write event
+        coordinator = coordinators.get(int(system_id))
+        parameter = coordinator and coordinator.description.parameters.get(int(parameter_id))
+        if not parameter or parameter.kind is None:
+            continue
+        platform = MODEL_PLATFORMS[parameter.kind]
+        if stale.domain == platform:
+            continue
+        sibling_id = registry.async_get_entity_id(platform, DOMAIN, stale.unique_id)
+        sibling = sibling_id and registry.async_get(sibling_id)
+        if not sibling:
+            continue
+        changes: dict[str, Any] = {
+            field: getattr(stale, field)
+            for field in ("name", "icon", "area_id")
+            if getattr(stale, field) is not None and getattr(sibling, field) is None
+        }
+        if not stale.disabled_by and sibling.disabled_by is er.RegistryEntryDisabler.INTEGRATION:
+            changes["disabled_by"] = None
+        if changes:
+            registry.async_update_entity(sibling.entity_id, **changes)
+        # Entity and unique IDs carry the system name or ID; the ParameterId does not.
+        LOGGER.info("Parameter %s moved from %s to %s", parameter_id, stale.domain, platform)
+        registry.async_remove(stale.entity_id)
 
 
 def _check_wolflink(hass: HomeAssistant) -> None:
