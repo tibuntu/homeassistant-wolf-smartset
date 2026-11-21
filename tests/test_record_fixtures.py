@@ -1,6 +1,11 @@
-"""Redaction helpers of the fixture recorder."""
+"""Redaction helpers used by the fixture recorder."""
 
-from scripts.record_fixtures import REDACTED, redact_faults, redact_values, secret_value_ids
+from custom_components.wolf_smartset.redact import (
+    REDACTED,
+    redact_faults,
+    redact_values,
+    secret_value_ids,
+)
 
 DESCRIPTION = {
     "MenuItems": [

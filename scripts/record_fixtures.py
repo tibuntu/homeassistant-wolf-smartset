@@ -34,40 +34,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from custom_components.wolf_smartset.api import WolfClient
 from custom_components.wolf_smartset.model import parse_description
-from custom_components.wolf_smartset.redact import (  # noqa: F401 (REDACTED for the tests)
-    REDACTED,
+from custom_components.wolf_smartset.redact import (
     redact_description,
+    redact_faults,
     redact_ids,
     redact_values,
     secret_value_ids,
 )
-
-
-# Wolf's fault texts and codes ("Description", "ErrorCode") describe the fault, not the
-# installation, and are the point of the recording. "Description" is in SECRET_KEYS, so
-# it is kept only inside these message lists. Device labels and the gateway event
-# payload are of unknown content and are blanked.
-FAULT_MESSAGE_LISTS = {"CurrentMessages", "HistoryMessages"}
-FAULT_SECRET_KEYS = {"Device", "DeviceName", "DeviceShortName", "Payload"}
-
-
-def redact_faults(data: Any, in_message: bool = False) -> Any:
-    """Redact a ReadFaultMessages response, keeping the fault texts of message entries."""
-    if isinstance(data, list):
-        return [redact_faults(item, in_message) for item in data]
-    if not isinstance(data, dict):
-        return data
-    result: dict[str, Any] = {}
-    for key, value in data.items():
-        if in_message and key == "Description":
-            result[key] = value
-        elif key in FAKE_IDS and value is not None:
-            result[key] = FAKE_IDS[key]
-        elif (key in SECRET_KEYS or key in FAULT_SECRET_KEYS) and value:
-            result[key] = REDACTED
-        else:
-            result[key] = redact_faults(value, key in FAULT_MESSAGE_LISTS)
-    return result
 
 
 def credentials() -> tuple[str, str]:
