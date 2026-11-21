@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.7.1...v0.7.2) (2026-11-21)
+
+
+### Bug Fixes
+
+* **redact:** blank SystemName in fixtures, diagnostics and write history ([1060360](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/106036094c7bd10a030e050190a0635c6bb7a497))
+
 ## [0.7.1](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.7.0...v0.7.1) (2026-11-21)
 
 
