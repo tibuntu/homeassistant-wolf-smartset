@@ -1,6 +1,9 @@
 {
   "domain": "wolf_smartset",
   "name": "Wolf SmartSet (read/write)",
+  "categories": [
+    "climate"
+  ],
   "codeowners": [
     "@tibuntu"
   ],

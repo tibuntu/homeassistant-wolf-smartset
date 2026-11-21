@@ -14,7 +14,6 @@ One brief per finding of the feature research of 2026-11-20 (integration 0.6.1, 
 | 08 | [Fault-message endpoints](08-fault-message-endpoints.md) | needs owner go at step 3 | investigation |
 | 09 | [Dashboard section strategy](09-dashboard-section-strategy.md) | needs owner decision | unknown |
 | 10 | [Config entry functions return None](10-config-entry-functions-return-none.md) | waits for the next HA bump | small |
-| 11 | [Manifest categories](11-manifest-categories.md) | ready | one line |
 | 12 | [Polling health sensors](12-parked-polling-health-sensors.md) | parked | |
 | 13 | [Two-speed polling](13-parked-two-speed-polling.md) | parked | |
 | 14 | [water_heater entity](14-parked-water-heater-entity.md) | parked | |
