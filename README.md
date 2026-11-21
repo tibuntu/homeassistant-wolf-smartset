@@ -65,10 +65,10 @@ The setting only applies when an entity is created. Installations that already r
 
 ## Fault entities
 
-Each system device has two entities fed by the portal's fault list, read every 10 minutes (fixed, separate from the value poll; [ADR-Polling-019](docs/adr/ADR-Polling-019-fault-messages-read.md)):
+Each system device has two entities fed by the portal's fault list, read every 10 minutes (fixed, separate from the value poll; [ADR-Polling-019](docs/adr/ADR-Polling-019-fault-messages-read.md), [ADR-Polling-020](docs/adr/ADR-Polling-020-fault-read-never-logs-in.md)). The fault read never logs in; it uses the value poll's login and session, and pauses while that poll is throttled or the account needs re-authentication. The entities:
 
 - *Fault* (binary sensor, device class `problem`, translation key `fault`): on while the portal lists a current fault.
-- *Fault code* (sensor, translation key `fault_code`): Wolf's error code of the newest current fault, unknown without one. Attributes `description` and `occurred` give Wolf's fault text and the time it came in.
+- *Fault code* (sensor, translation key `fault_code`): Wolf's error code of the first current fault the portal lists, unknown without one. That this is the newest one is an assumption: the portal lists its fault history newest first, but a current fault has not been recorded yet. Attributes `description` and `occurred` give Wolf's fault text and the time it came in.
 
 Faults often last only one to three minutes, shorter than the 10-minute read. The fault code sensor therefore also carries the newest entry of the portal's fault history as `last_fault_code`, `last_fault_description`, `last_fault_occurred` and `last_fault_ended`, so a fault that came and went between two reads still shows up. Times are the portal's local times as sent; `occurred` can be empty when the portal leaves it out. If a fault read fails, only these two entities become unavailable.
 

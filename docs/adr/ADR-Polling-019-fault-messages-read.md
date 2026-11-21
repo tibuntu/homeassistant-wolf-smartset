@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted. The client bullet of the implementation (login through `_ensure_session`) and the newest-first statement for `CurrentMessages` are amended by [ADR-Polling-020](ADR-Polling-020-fault-read-never-logs-in.md): the fault read never logs in, and the order of current faults is an assumption.
 
 ## Date
 
