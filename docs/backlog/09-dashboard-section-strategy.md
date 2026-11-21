@@ -4,7 +4,7 @@ Status: needs owner decision (step 2); the platform claim is reported, not verif
 
 ## Context
 
-The integration ships no frontend code. The research verdict of 2026-11-20 is to build no sidebar panel: the write history fits an event entity ([brief 01](01-write-result-event-entity.md)) and all settings fit the options flow.
+The integration ships no frontend code. The research verdict of 2026-11-20 is to build no sidebar panel: the write history fits the write-result event entity (`event.py`) and all settings fit the options flow.
 
 The frontend users have today is the third-party [Heat Pump Hydraulic Card](https://github.com/Sturmi77/heatpump-hydraulic-card). Its `wolf` preset finds this integration's entities by translation key (reported: card pull request 91, merged 2026-10-26). Gaps of that preset, as reported from the pull request text:
 
