@@ -291,6 +291,8 @@ HACS installs only the integration, so import the blueprint with the badge. The 
 
 The conditions are: hot water temperature below the limit, the switch is off, and the last run is longer ago than the cooldown. Every run is a write to the controller ([Writing](#writing)); with dry run on, the default, the automation runs, nothing reaches the heat pump and the switch snaps back. Switch dry run off only when you want real charges.
 
+The automation fires when the surplus crosses the threshold. If a condition blocks it at that moment (warm tank, cooldown, switch already on), it waits for the next crossing. The surplus sensor and the threshold must use the same unit (W by default); with a kW sensor, set the threshold in kW.
+
 ## Removal
 
 Settings › Devices & services › Wolf SmartSet › three-dot menu › *Delete*. This removes the entry, its devices and entities. The write history `.storage/wolf_smartset.<entry_id>.history` stays behind; delete it by hand if you want it gone. Re-enable the core "Wolf SmartSet Service" integration afterwards if you still need it.
