@@ -230,6 +230,47 @@ template:
 
 The sensor is unavailable until the day's estimate passes 0.5 kWh. A daily value is noisy; use `cycle: weekly` or `monthly` for a steadier number. In the 14-day measurement the COP was about 5.4.
 
+### Dashboard section with built-in cards
+
+A "Wolf heating" section for a [sections view](https://www.home-assistant.io/dashboards/sections/), made only of built-in `heading` and `tile` cards. Open the dashboard, switch to *Edit* › the three-dots menu › *Raw configuration editor*, and paste the section into the `sections:` list of a view with `type: sections`.
+
+Replace the `*.wolf_*` entity IDs with the IDs of your entities (find them by the Wolf label or the [translation key](#translation-keys)); the comments name both.
+
+```yaml
+- type: grid
+  cards:
+    - type: heading
+      heading: Wolf heating
+      heading_style: title
+      icon: mdi:heat-pump
+    # Warmwassertemperatur, dhw_temperature
+    - type: tile
+      entity: sensor.wolf_dhw_temperature
+      name: Hot water
+    # Warmwassersolltemperatur eingestellt, set_dhw_temperature (number, writes)
+    - type: tile
+      entity: number.wolf_set_dhw_temperature
+      name: Hot water setpoint
+    # 1x Warmwasser, one_time_dhw_charge (switch, writes)
+    - type: tile
+      entity: switch.wolf_one_time_dhw_charge
+      name: One-time hot water charge
+    # Programmwahl (Heizung), program_heating (select, writes)
+    - type: tile
+      entity: select.wolf_program_heating
+      name: Heating program
+    # Außentemperatur (Heizung), outside_temperature
+    - type: tile
+      entity: sensor.wolf_outside_temperature
+      name: Outside
+    # Vorlauftemperatur, flow_temperature
+    - type: tile
+      entity: sensor.wolf_flow_temperature
+      name: Flow
+```
+
+A card whose entity does not exist on your installation shows "Entity not found"; delete that card. The number, switch and select tiles write to the controller's EEPROM like any other write ([Writing](#writing)).
+
 ## Removal
 
 Settings › Devices & services › Wolf SmartSet › three-dot menu › *Delete*. This removes the entry, its devices and entities. The write history `.storage/wolf_smartset.<entry_id>.history` stays behind; delete it by hand if you want it gone. Re-enable the core "Wolf SmartSet Service" integration afterwards if you still need it.

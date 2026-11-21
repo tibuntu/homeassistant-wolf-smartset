@@ -31,7 +31,7 @@ Stop and ask, never proceed on your own, for:
 
 - any real write to the heating system, including trying a blueprint or automation with dry run off;
 - the first call to an endpoint the integration does not use yet (brief 08, step 3);
-- the decision in brief 09, and raising the minimum Home Assistant version (brief 10);
+- raising the minimum Home Assistant version (brief 10);
 - reopening or commenting on GitHub issues, releases, and anything in the owner's Home Assistant.
 
 Read-only measurements on the owner's Home Assistant are allowed without asking: a read-only SQLite query against the recorder (`file:/config/home-assistant_v2.db?mode=ro`) piped through `kubectl --context tibuntu -n homeassistant exec -i homeassistant-home-assistant-0 -c home-assistant -- python3 -`. Write the script to a file first; no heredocs.
