@@ -11,6 +11,13 @@ Usage (in your own terminal, so the password never lands in a log):
 
 Without the environment variables the script prompts for both values.
 Check the output with `git diff` before committing it.
+
+Fault messages (owner's go 2026-11-21, backlog brief 08): login, system list,
+then exactly one ReadFaultMessages call for the first system, sent without
+SessionId like the portal. Writes only fault_messages.json; the other fixtures
+stay untouched.
+
+    .venv/bin/python scripts/record_fixtures.py --faults tests/fixtures/real
 """
 
 import asyncio
@@ -106,10 +113,69 @@ def redact_values(values: dict[str, Any], secret_ids: set[int]) -> dict[str, Any
     return result
 
 
-async def record(target: Path) -> None:
-    """Fetch, redact and store the responses."""
+# Wolf's fault texts and codes ("Description", "ErrorCode") describe the fault, not the
+# installation, and are the point of the recording. "Description" is in SECRET_KEYS, so
+# it is kept only inside these message lists. Device labels and the gateway event
+# payload are of unknown content and are blanked.
+FAULT_MESSAGE_LISTS = {"CurrentMessages", "HistoryMessages"}
+FAULT_SECRET_KEYS = {"Device", "DeviceName", "DeviceShortName", "Payload"}
+
+
+def redact_faults(data: Any, in_message: bool = False) -> Any:
+    """Redact a ReadFaultMessages response, keeping the fault texts of message entries."""
+    if isinstance(data, list):
+        return [redact_faults(item, in_message) for item in data]
+    if not isinstance(data, dict):
+        return data
+    result: dict[str, Any] = {}
+    for key, value in data.items():
+        if in_message and key == "Description":
+            result[key] = value
+        elif key in FAKE_IDS and value is not None:
+            result[key] = FAKE_IDS[key]
+        elif (key in SECRET_KEYS or key in FAULT_SECRET_KEYS) and value:
+            result[key] = REDACTED
+        else:
+            result[key] = redact_faults(value, key in FAULT_MESSAGE_LISTS)
+    return result
+
+
+def credentials() -> tuple[str, str]:
+    """Username and password from the environment, else prompted."""
     username = os.environ.get("WOLF_USERNAME") or input("Wolf SmartSet username: ")
     password = os.environ.get("WOLF_PASSWORD") or getpass.getpass("Password: ")
+    return username, password
+
+
+async def record_faults(target: Path) -> None:
+    """One ReadFaultMessages call for the first system, without SessionId."""
+    username, password = credentials()
+    target.mkdir(parents=True, exist_ok=True)
+    async with httpx.AsyncClient(timeout=30) as http:
+        client = WolfClient(http, username, password)
+        try:
+            systems = await client.get_systems()
+            print(f"{len(systems)} system(s); reading fault messages of the first only")
+            # _call, not _request: _request adds SessionId and retries; the owner
+            # approved exactly one call with the portal's payload.
+            raw = await client._call(
+                "POST",
+                "ReadFaultMessages",
+                json={
+                    "LastRead": None,
+                    "GatewayId": systems[0].gateway_id,
+                    "SystemId": systems[0].id,
+                },
+            )
+            write(target / "fault_messages.json", redact_faults(raw))
+        finally:
+            await client.close()
+    print(f"logins: {client.login_count}; wrote {target / 'fault_messages.json'}")
+
+
+async def record(target: Path) -> None:
+    """Fetch, redact and store the responses."""
+    username, password = credentials()
     target.mkdir(parents=True, exist_ok=True)
     async with httpx.AsyncClient(timeout=30) as http:
         client = WolfClient(http, username, password)
@@ -165,4 +231,8 @@ def write(path: Path, data: Any) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(record(Path(sys.argv[1] if len(sys.argv) > 1 else "tests/fixtures/real")))
+    args = sys.argv[1:]
+    faults = "--faults" in args
+    paths = [a for a in args if a != "--faults"]
+    out = Path(paths[0] if paths else "tests/fixtures/real")
+    asyncio.run(record_faults(out) if faults else record(out))
