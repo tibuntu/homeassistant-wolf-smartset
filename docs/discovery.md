@@ -670,15 +670,72 @@ Belege (wörtlich):
 
 ### 17.4 Offene Punkte
 
-- **[Offen]** Inhalt und Format der Antwort auf der echten Anlage: Typ von `ErrorCode` (Zahl oder Text), Format der Zeitstempel, ob `HistoryMessages` ohne aktuelle Störung gefüllt ist, wie weit die Historie zurückreicht.
+- ~~**[Offen]** Inhalt und Format der Antwort auf der echten Anlage~~: beschrieben in 17.6.
 - **[Offen]** Bedeutung von `LastRead`. Das Portal sendet immer `LastRead: null`. `handleResponse` schreibt den Rückgabewert in `e.lastRead` (kleines `l`) des DTO-Objekts, das bei den Folge-Polls mitgeschickt wird; ob der Server dieses Feld neben `LastRead: null` auswertet, ist unklar. Mit `LastRead: null` liefert der Server vermutlich den vollen Stand mit `MessagesChanged: true`.
-- **[Offen]** Ob der Server eine `SessionId` im Body erwartet oder toleriert. Das Portal sendet keine; unser Client fügt sie in `_request` jedem JSON-Body hinzu.
+- **[Offen]** Ob der Server eine `SessionId` im Body erwartet oder toleriert. Das Portal sendet keine; unser Client fügt sie in `_request` jedem JSON-Body hinzu. Ohne `SessionId` funktioniert der Aufruf (17.6); ob er sie toleriert, ist weiter ungeprüft.
 - **[Offen]** Ob `ReadFaultMessages` am Gateway ein Push-Bundle aktiviert oder Last erzeugt. Es nimmt keine `BundleId`; das Risiko aus Abschnitt 3.3 (ungültige BundleId) betrifft diesen Aufruf daher nicht.
 - **Nicht aufrufen:** `CommitFaultMessage` quittiert eine Störung am Regler; `Create…V2`, `Update…V2` und `DeleteFaultMessageDestination` ändern die E-Mail-Benachrichtigungen des Kontos. `ReadFaultMessageDestinationList` liest nur diese Konfiguration (E-Mail-Adressen) und ist für das Ziel des Briefs nicht nötig.
-- Schritt 3 (eine einzige Lese-Anfrage an `ReadFaultMessages`) wartet auf die Freigabe des Eigentümers.
+- Schritt 3 (eine einzige Lese-Anfrage an `ReadFaultMessages`) ist freigegeben und erledigt (17.5, 17.6).
 
 ### 17.5 Freigabe Schritt 3
 
 **Freigabe des Eigentümers, Chat 2026-11-21:** genau **ein** Aufruf `POST /portal/api/portal/ReadFaultMessages` mit `{"LastRead": null, "GatewayId": <id>, "SystemId": <id>}`, **ohne** `SessionId` (wie der Browser). `CommitFaultMessage` und alle `…FaultMessageDestination…`-Endpunkte bleiben gesperrt.
 
-Umsetzung: `scripts/record_fixtures.py --faults` meldet sich an, liest die Systemliste und sendet den einen Aufruf für die erste Anlage über `_call` (ohne die `SessionId`-Ergänzung und ohne die Wiederholung von `_request`). Die geschwärzte Antwort landet in `tests/fixtures/real/fault_messages.json`; die anderen Fixtures bleiben unberührt. IDs werden wie üblich ersetzt; Wolfs Störtexte (`Description`) bleiben nur innerhalb von `CurrentMessages`/`HistoryMessages` erhalten, Gerätebezeichnungen und `Payload` der Gateway-Meldungen werden geschwärzt. Den Aufruf startet der Eigentümer im eigenen Terminal. Die Antwort wird hier ergänzt, sobald sie vorliegt. [Offen]
+Umsetzung: `scripts/record_fixtures.py --faults` meldet sich an, liest die Systemliste und sendet den einen Aufruf für die erste Anlage über `_call` (ohne die `SessionId`-Ergänzung und ohne die Wiederholung von `_request`). Die geschwärzte Antwort landet in `tests/fixtures/real/fault_messages.json`; die anderen Fixtures bleiben unberührt. IDs werden wie üblich ersetzt; Wolfs Störtexte (`Description`) bleiben nur innerhalb von `CurrentMessages`/`HistoryMessages` erhalten, Gerätebezeichnungen und `Payload` der Gateway-Meldungen werden geschwärzt. Den Aufruf startet der Eigentümer im eigenen Terminal. Er hat ihn am 2026-11-21 einmal ausgeführt; die Antwort beschreibt 17.6.
+
+Die erste Aufnahme enthielt auf oberster Ebene `SystemName` mit dem echten Anlagennamen: der Schlüssel stand nicht in `SECRET_KEYS`, und `scripts/check-fixtures.sh` prüfte ihn nicht. Vor dem Commit behoben: `SystemName` steht jetzt in `SECRET_KEYS` (gilt für alle Redaktoren, auch Diagnose und Schreibhistorie), die Fixture wurde neu geschwärzt, und `check-fixtures.sh` schlägt bei einem ungeschwärzten `SystemName` und bei einem `Name` auf oberster Ebene fehl.
+
+### 17.6 Antwort von `ReadFaultMessages`
+
+[Gemessen 2026-11-21, ein Aufruf ohne `SessionId`, geschwärzt in `tests/fixtures/real/fault_messages.json`] Der Aufruf ohne `SessionId` liefert HTTP 200 mit folgendem Objekt:
+
+| Feld | Typ | Beobachtung |
+|---|---|---|
+| `SystemId` | Zahl | ID der Anlage (geschwärzt) |
+| `SystemName` | Text | Anlagenname, Kennung, wird geschwärzt |
+| `MessagesChanged` | bool | `true` (erster Aufruf mit `LastRead: null`) |
+| `LastRead` | Text, ISO 8601 UTC mit 7 Nachkommastellen (`…T14:19:21.5658752Z`) | Zeitpunkt des Aufrufs, vom Server gesetzt |
+| `CurrentMessages` | Liste | leer: zum Aufnahmezeitpunkt keine aktive Störung |
+| `HistoryMessages` | Liste | 5 Einträge, neueste zuerst |
+| `DeviceFaultMessages` | Liste | leer (passt zu `DynFaultMessageDevices: []`, 17.3) |
+| `CommitFaultMessageEntries` | Liste | leer (nichts zu quittieren) |
+| `SystemMaintenanceState` | Objekt | `Mode` (Zahl, 0), `Date` (Text, ISO 8601 mit Offset, `2026-11-21T01:00:00+01:00`), `Progress` (Zahl, 0), `CWLFilterMaintenancePending` (bool, `false`) |
+| `GatewayEvents` | Liste | leer |
+
+Ein Eintrag in `HistoryMessages`:
+
+| Feld | Typ | Beobachtung |
+|---|---|---|
+| `Id` | Zahl | geschwärzt (der Redaktor ersetzt jedes `Id`) |
+| `ErrorCode` | **Zahl** | 107, 119, 118 |
+| `Description` | Text | Wolfs deutscher Anzeigetext: „Druck Heizkreis“ (107, dreimal), „Abtauenergie“ (119), „PCB unterbr.“ (118) |
+| `OccurTimeLocal` | Text, ISO 8601 ohne Offset (Ortszeit) | **fehlt bei einem Eintrag** (Index 2); der Schlüssel fehlt ganz, er ist nicht `null` |
+| `OutgoingTimeLocal` | Text, wie oben | bei allen Einträgen vorhanden |
+| `Active` | bool | überall `false` |
+| `Index` | Zahl | 0 bis 4, fortlaufend, 0 = neueste |
+| `Device` | Text | Gerätebezeichnung, geschwärzt |
+
+Beobachtungen:
+
+- Die Historie reicht etwa ein Jahr zurück: ältester Eintrag 2025-11-10 (118), neuester 2026-03-09 (107). Ob der Server sie nach Zeit oder Anzahl begrenzt, ist offen. [Offen]
+- Alle Störungen dauerten ein bis drei Minuten (`OccurTimeLocal` bis `OutgoingTimeLocal`). Der Eintrag ohne `OccurTimeLocal` hat dasselbe `OutgoingTimeLocal` wie der Abtau-Eintrag davor (2026-03-04 13:18:50).
+- `HistoryMessages` ist also auch ohne aktuelle Störung gefüllt.
+- Zur Aufnahme gab es keine aktive Störung. Wie ein Eintrag in `CurrentMessages` aussieht, ist daher **nicht aufgenommen**, sondern abgeleitet: aus den Spalten der Tabelle „Aktive Meldungen“ im Portal-JS (17.3: `OccurTimeLocal`, `ErrorCode`, `Description`, `Device`) und aus den Historien-Einträgen; vermutlich dieselbe Struktur ohne `OutgoingTimeLocal` und mit `Active: true`. [Code, nicht aufgenommen]
+- Ob `Active` in `CurrentMessages` wirklich `true` ist und beim Gehen der Störung auf `false` wechselt, bevor der Eintrag in die Historie wandert, ist offen. [Offen]
+- `SystemMaintenanceState.Date` ist der Aufnahmetag um 00:00 Ortszeit, also eher ein „Stand“ als ein Fälligkeitsdatum. Die Bedeutung von `Mode` und `Progress` ist ohne fällige Wartung nicht ableitbar; das Portal-JS wurde in Schritt 1 nicht darauf untersucht. `CWLFilterMaintenancePending` betrifft dem Namen nach den Filter eines Wolf-Lüftungsgeräts (CWL); die Beschreibung der Anlage des Eigentümers enthält kein solches Gerät (CHA mit BM-2 und MM1). [Offen]
+
+### 17.7 Empfehlung (Brief 08, Schritt 5)
+
+**Ja, mit Einschränkungen.** Aus der Antwort lassen sich bauen:
+
+1. ein `binary_sensor` mit Device-Class `problem`: an, wenn `CurrentMessages` einen Eintrag enthält (alternativ: einen Eintrag mit `Active: true`, sobald belegt ist, dass `Active` dort wahr ist);
+2. ein Störcode-Sensor: `ErrorCode` des neuesten Eintrags in `CurrentMessages` als Zustand (Zahl, also kein Übersetzungsproblem), `Description` als Attribut, unverändert als Wolfs Anzeigetext (Regel 6); ohne aktive Störung `None`. Beide mit eigenem Übersetzungsschlüssel.
+
+Abwägungen:
+
+- **Poll-Kosten.** Der Browser fragt alle 10 s (17.3). Die Integration sollte einen eigenen, langsamen Takt nutzen, etwa alle 5 bis 10 Minuten, getrennt vom Werte-Poll (120 s). Das ist eine zusätzliche Anfrage pro Anlage und Takt, kein Login. Störungen dauerten in der Historie ein bis drei Minuten; ein 5-Minuten-Takt verpasst kurze Störungen also im Sensor. Die Historie fängt sie trotzdem auf: der Sensor kann neue `HistoryMessages`-Einträge zusätzlich auswerten (z. B. als Event oder als „letzte Störung“-Attribut).
+- **Rate- und Sperr-Risiko.** Gering: `ReadFaultMessages` nimmt keine `BundleId`, das Sperr-Risiko aus 3.3 (ungültige BundleId) entfällt. Wolf sperrt laut Abschnitt 3 nach zu vielen Logins, nicht nach Anfragen; jede Portal-Sitzung des Browsers ruft den Endpunkt ohnehin alle 10 s auf. [Code, Bericht]
+- **Unbekannt.** Wie ein aktiver `CurrentMessages`-Eintrag genau aussieht und ob `Active` umspringt (17.6). Der Sensor sollte deshalb nur auf „Liste nicht leer“ und die Felder bauen, die auch die Historie hat, und fehlende Felder (`OccurTimeLocal`) vertragen. Erst eine echte Störung belegt die Annahme.
+- **`SystemMaintenanceState`.** Reicht heute nicht für einen „Wartung fällig“-Sensor: `Mode`, `Progress` und die Rolle von `Date` sind unbelegt. Vorschlag: das Objekt in die Diagnose aufnehmen und erst nach einer fälligen Wartung oder einer Analyse des Portal-JS entscheiden.
+
+Bau ist ein neuer Brief: `docs/backlog/15-fault-sensors.md`. Ob Issue #25 wieder geöffnet wird, entscheidet der Eigentümer.

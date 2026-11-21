@@ -4,11 +4,11 @@ One brief per finding of the feature research of 2026-11-20 (integration 0.6.1, 
 
 | # | Brief | Status | Size |
 |---|---|---|---|
-| 08 | [Fault-message endpoints](08-fault-message-endpoints.md) | step 3 approved by the owner 2026-11-21 (one ReadFaultMessages call, no SessionId); waits for the owner to run `record_fixtures.py --faults` | investigation |
 | 10 | [Config entry functions return None](10-config-entry-functions-return-none.md) | waits for the next HA bump | small |
 | 12 | [Polling health sensors](12-parked-polling-health-sensors.md) | parked | |
 | 13 | [Two-speed polling](13-parked-two-speed-polling.md) | parked | |
 | 14 | [water_heater entity](14-parked-water-heater-entity.md) | parked | |
+| 15 | [Fault sensors from ReadFaultMessages](15-fault-sensors.md) | needs owner decision (periodic call, cadence, issue #25) | medium |
 
 An orchestrating agent starts from [`ORCHESTRATOR.md`](ORCHESTRATOR.md). Suggested order: 01, 02, 03, then 04. Parked briefs record why an idea was set aside and what would reopen it; implement one only when its "Revisit when" condition holds.
 
