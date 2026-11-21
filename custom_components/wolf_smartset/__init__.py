@@ -109,30 +109,40 @@ async def async_unload_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> boo
 
 
 def _remove_stale_entities(hass: HomeAssistant, entry: WolfConfigEntry) -> None:
-    """Drop entries left behind when a parameter moved to another platform.
+    """Drop the number and select entries 0.6.0 left behind for expert parameters.
 
-    An entry is stale only when the current description maps its parameter to another
-    platform and an entry with the same unique ID exists there. Anything else stays,
-    including parameters missing from the description: a short portal problem must not
-    delete the user's names and settings. The user's name, icon and area move to the
-    sibling, and an enabled stale entry enables a sibling the integration disabled
-    (never one the user disabled). Enabling makes HA reload the entry ~30 s later;
-    the stale entry is gone by then, so the reload finds nothing to do.
+    0.6.0 made expert parameters read-only sensors. An entry is stale only when it is a
+    number or select, its parameter is an expert parameter the current description maps
+    to a sensor, and a sensor entry with the same unique ID exists. This is narrower
+    than "the platform changed": the kind of a writable parameter can flip when the
+    portal returns a partial description (a missing tab, IsReadOnly or limits), and that
+    must not delete a live, user-renamed entity. Expert parameters are read-only by
+    design (ExpertLogin is never called), so a hiccup cannot flip theirs. Parameters
+    missing from the description stay too.
+
+    The user's customisation moves to the sensor where the sensor has none, and an
+    enabled stale entry enables a sensor the integration disabled (never one the user
+    disabled). Enabling makes HA reload the entry ~30 s later; the stale entry is gone
+    by then, so the reload finds nothing to do.
     """
     registry = er.async_get(hass)
     coordinators = entry.runtime_data.coordinators
     for stale in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if stale.domain not in ("number", "select"):
+            continue
         system_id, _, parameter_id = stale.unique_id.partition("_")
         if not (system_id.isdigit() and parameter_id.isdigit()):
-            continue  # undo, connectivity, write event
+            continue
         coordinator = coordinators.get(int(system_id))
         parameter = coordinator and coordinator.description.parameters.get(int(parameter_id))
-        if not parameter or parameter.kind is None:
+        if not (
+            parameter
+            and parameter.expert
+            and parameter.kind
+            and MODEL_PLATFORMS[parameter.kind] == "sensor"
+        ):
             continue
-        platform = MODEL_PLATFORMS[parameter.kind]
-        if stale.domain == platform:
-            continue
-        sibling_id = registry.async_get_entity_id(platform, DOMAIN, stale.unique_id)
+        sibling_id = registry.async_get_entity_id("sensor", DOMAIN, stale.unique_id)
         sibling = sibling_id and registry.async_get(sibling_id)
         if not sibling:
             continue
@@ -141,13 +151,24 @@ def _remove_stale_entities(hass: HomeAssistant, entry: WolfConfigEntry) -> None:
             for field in ("name", "icon", "area_id")
             if getattr(stale, field) is not None and getattr(sibling, field) is None
         }
+        if stale.labels and not sibling.labels:
+            changes["labels"] = stale.labels
+        # A new entry's aliases are [COMPUTED_NAME]; only text aliases are the user's.
+        if _user_aliases(stale) and not _user_aliases(sibling):
+            changes["aliases"] = stale.aliases
+        if stale.hidden_by is er.RegistryEntryHider.USER and sibling.hidden_by is None:
+            changes["hidden_by"] = er.RegistryEntryHider.USER
         if not stale.disabled_by and sibling.disabled_by is er.RegistryEntryDisabler.INTEGRATION:
             changes["disabled_by"] = None
         if changes:
             registry.async_update_entity(sibling.entity_id, **changes)
         # Entity and unique IDs carry the system name or ID; the ParameterId does not.
-        LOGGER.info("Parameter %s moved from %s to %s", parameter_id, stale.domain, platform)
+        LOGGER.info("Expert parameter %s moved from %s to sensor", parameter_id, stale.domain)
         registry.async_remove(stale.entity_id)
+
+
+def _user_aliases(entry: er.RegistryEntry) -> bool:
+    return any(isinstance(alias, str) for alias in entry.aliases)
 
 
 def _check_wolflink(hass: HomeAssistant) -> None:
