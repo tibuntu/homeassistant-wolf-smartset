@@ -39,12 +39,13 @@ STORAGE_VERSION = 1
 HISTORY_LIMIT = 200
 # A value read earlier than this after the write may predate the controller's update.
 CONFIRM_AFTER_SECONDS = 30
-# A mismatch is final only once max(SETTLE_POLLS poll intervals, SETTLE_SECONDS) have passed.
-# Measured 2026-11-18 at a 120 s interval: the DHW setpoint read the old value 100 s and
-# 120 s after the write and the new one only 220 s and 240 s after it. 300 s covers that
-# with margin at the shortest allowed interval (60 s); two intervals keep at least one more
-# poll after a stale one in case the portal's delay is tied to polls rather than to time.
-SETTLE_POLLS = 2
+# A mismatch is final only once max(poll interval + CONFIRM_AFTER_SECONDS, SETTLE_SECONDS)
+# have passed (ADR-Writes-018). Measured 2026-11-18 at a 120 s interval: the DHW setpoint
+# read the old value 100 s and 120 s after the write and the new one only 220 s and 240 s
+# after it. 300 s covers that with margin at any allowed interval (60 s and up). The interval
+# term matters above 270 s: the first poll that may decide comes within one interval after
+# CONFIRM_AFTER_SECONDS, so interval + CONFIRM_AFTER_SECONDS leaves at least one more poll
+# after it in case the portal's delay is tied to polls rather than to time.
 SETTLE_SECONDS = 300
 # AccessLevel of the portal needed for user-level writes (expert parameters are read-only).
 ACCESS_USER_WRITE = 2
@@ -283,7 +284,7 @@ class WriteManager:
         changed = False
         now = time.monotonic()
         interval = (coordinator.update_interval or timedelta()).total_seconds()
-        settle = max(SETTLE_POLLS * interval, SETTLE_SECONDS)
+        settle = max(interval + CONFIRM_AFTER_SECONDS, SETTLE_SECONDS)
         for key in [k for k in self._pending if k[0] == coordinator.system.id]:
             written_at, record, before = self._pending[key]
             value_id = key[1]

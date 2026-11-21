@@ -14,7 +14,12 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.wolf_smartset.api import ApiError, SystemState, Value
-from custom_components.wolf_smartset.const import CONF_DRY_RUN, CONF_MAX_WRITES_PER_HOUR, DOMAIN
+from custom_components.wolf_smartset.const import (
+    CONF_DRY_RUN,
+    CONF_MAX_WRITES_PER_HOUR,
+    CONF_SCAN_INTERVAL,
+    DOMAIN,
+)
 from custom_components.wolf_smartset.model import parse_description
 from custom_components.wolf_smartset.write import CONFIRM_AFTER_SECONDS, format_number, same_value
 
@@ -532,6 +537,34 @@ async def test_revert_is_confirmed_after_the_window(
     assert seen == ["ok", "ok"]
     assert await _poll_after(hass, mock_config_entry, freezer, 20) == "50.0"
     assert seen == ["ok", "ok", "confirmed"]
+
+
+@pytest.mark.parametrize(
+    ("scan_interval", "held_at", "decided_at"),
+    [
+        (120, 290, 310),  # the 300 s floor decides
+        (600, 600, 640),  # interval + 30 s = 630 s decides
+    ],
+)
+async def test_settle_window_size(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+    scan_interval: int,
+    held_at: int,
+    decided_at: int,
+) -> None:
+    """A mismatch just inside the window is held; the first poll after it decides."""
+    await _setup(
+        hass, mock_config_entry, **{CONF_DRY_RUN: False, CONF_SCAN_INTERVAL: scan_interval}
+    )
+    await _set_setpoint(hass, 60)  # the portal keeps reading 50
+
+    assert await _poll_after(hass, mock_config_entry, freezer, held_at) == "60.0"
+    assert _history(mock_config_entry)[-1]["confirmed"] is None
+    assert await _poll_after(hass, mock_config_entry, freezer, decided_at - held_at) == "50.0"
+    assert _history(mock_config_entry)[-1]["result"] == "not_applied"
 
 
 async def test_dry_runs_and_no_ops_do_not_count(
