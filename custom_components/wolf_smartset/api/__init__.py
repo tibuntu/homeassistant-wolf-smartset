@@ -470,6 +470,22 @@ class WolfClient:
             for v in data.get("Values") or []
         ]
 
+    async def read_fault_messages(self, system: System) -> dict[str, Any]:
+        """Return the raw ReadFaultMessages response with the portal's payload (ADR-Polling-019).
+
+        No SessionId and no retry: the body is the browser's. A 401 is raised without
+        dropping the token, so a failing fault read never logs in by itself; the value
+        poll keeps owning token and session.
+        """
+        await self._ensure_session()
+        payload = {"LastRead": None, "GatewayId": system.gateway_id, "SystemId": system.id}
+        try:
+            return await self._call("POST", "ReadFaultMessages", json=payload)
+        except _Unauthorized:
+            raise ApiError(401, "ReadFaultMessages") from None
+        except _InvalidSession:
+            raise ApiError(1, "ReadFaultMessages") from None
+
     async def write_value(
         self, system: System, bundle_id: int, value_id: int, value: str, name: str
     ) -> Any:
