@@ -259,6 +259,33 @@ async def test_failed_fault_read_keeps_value_entities(
     assert hass.states.get(fault).state == STATE_OFF
 
 
+async def test_expired_session_keeps_last_fault_data(
+    hass: HomeAssistant,
+    mock_client: MagicMock,
+    mock_config_entry: MockConfigEntry,
+    freezer: FrozenDateTimeFactory,
+) -> None:
+    """A token that expired since the last value poll keeps the fault entities.
+
+    Live 2026-11-21..23: the fault tick fell between token expiry and the next value
+    poll once an hour, and both entities went unavailable for 10 minutes.
+    """
+    fault, code = await _setup(hass, mock_config_entry)
+    mock_client.read_fault_messages.side_effect = NoSession("ReadFaultMessages")
+    freezer.tick(FAULT_INTERVAL)
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert mock_client.read_fault_messages.call_count == 2
+    assert hass.states.get(fault).state == STATE_OFF
+    assert hass.states.get(code).attributes["last_fault_code"] == 107
+
+    runtime = mock_config_entry.runtime_data
+    runtime.coordinators[1234].last_update_success = False  # no healthy value poll
+    await runtime.faults[1234].async_refresh()
+    await hass.async_block_till_done()
+    assert hass.states.get(fault).state == STATE_UNAVAILABLE
+
+
 async def test_no_fault_read_after_auth_failure(
     hass: HomeAssistant,
     mock_client: MagicMock,

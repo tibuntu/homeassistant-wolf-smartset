@@ -25,12 +25,13 @@ ADR-Polling-019 also stated in its context that both lists come newest first. On
 1. `read_fault_messages` never logs in and never creates or refreshes a portal session. If there is no token, the token has expired, or there is no session, it raises `NoSession` and sends no request at all. Login, token and session belong to the value poll alone.
 2. The fault coordinator also skips the read while Home Assistant reports an authentication problem: when the value coordinator's `last_exception` is `ConfigEntryAuthFailed`, or the config entry has an active reauth flow. The existing pause while the value poll backs off stays.
 3. "Newest current fault = first `CurrentMessages` entry" is an assumption, taken over from the recorded history (Index 0 = newest). The first recorded real fault confirms or corrects it.
+4. A `NoSession` while the value poll is healthy keeps the last fault result instead of failing. The token expires between two value polls, and the next value poll renews it. Without a healthy value poll, the read fails as before.
 
 Unchanged from ADR-Polling-019: the payload without `SessionId`, the fixed 10-minute cadence, the immediate read at setup, the per-system pause and the entities.
 
 ## Rationale
 
-The value poll runs every 120 s by default and renews token and session itself. So with the value poll healthy, the fault read always finds a valid token and session. When the value poll is not healthy (auth failure, login block, throttling), the fault read has no business sending anything. Point 1 on its own already stops the login loop. Point 2 also covers an auth failure that leaves the token valid, for example an `ErrorCode 3` answer, and a reauth flow the user dismissed while the value poll stays stopped.
+The value poll runs every 120 s by default and renews token and session itself. So with the value poll healthy, the fault read finds a valid token and session, except in the short window between token expiry and the next value poll. Live from 2026-11-21 to 2026-11-23, the 10-minute tick fell into that window once an hour, and both fault entities went unavailable for 10 minutes. Point 4 covers that window. When the value poll is not healthy (auth failure, login block, throttling), the fault read has no business sending anything. Point 1 on its own already stops the login loop. Point 2 also covers an auth failure that leaves the token valid, for example an `ErrorCode 3` answer, and a reauth flow the user dismissed while the value poll stays stopped.
 
 ### Alternatives Considered
 
