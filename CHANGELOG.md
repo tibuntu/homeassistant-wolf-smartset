@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.2](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.8.1...v0.8.2) (2026-11-23)
+
+
+### Bug Fixes
+
+* keep the last fault result while the token awaits renewal ([ca2e0b0](https://github.com/tibuntu/homeassistant-wolf-smartset/commit/ca2e0b0c09120a4b25af4529fbe533a82410f76f))
+
 ## [0.8.1](https://github.com/tibuntu/homeassistant-wolf-smartset/compare/v0.8.0...v0.8.1) (2026-11-21)
 
 
