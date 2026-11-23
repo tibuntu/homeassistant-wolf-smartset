@@ -23,6 +23,7 @@ from .api import (
     STATE_TIMEOUT,
     AuthError,
     LoginFailed,
+    NoSession,
     ParameterReadError,
     PortalUnavailable,
     System,
@@ -300,5 +301,13 @@ class WolfFaultCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise UpdateFailed("Fault read paused until the account is re-authenticated")
         try:
             return await self.values.client.read_fault_messages(self.values.system)
+        except NoSession as err:
+            # The token expired since the last value poll, which renews it on its next
+            # tick (ADR-Polling-020: the fault read never logs in). Keep the last result
+            # while the value poll is healthy; it renews the token within one interval.
+            if self.data is not None and self.values.last_update_success:
+                LOGGER.debug("Fault read skipped until the value poll renews the session")
+                return self.data
+            raise UpdateFailed(f"Cannot read the fault messages: {err}") from err
         except WolfError as err:
             raise UpdateFailed(f"Cannot read the fault messages: {err}") from err
