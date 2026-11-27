@@ -1,10 +1,10 @@
 # 10 – Config entry functions return None
 
-Status: waits for the next Home Assistant bump; the claim is reported, not verified · Size: small · Rules: [README](README.md#rules-for-every-brief)
+Status: ready, the test pin now brings Home Assistant 2026.11.3; the claim is reported, not verified · Size: small · Rules: [README](README.md#rules-for-every-brief)
 
 ## Trigger
 
-Start this brief with the Renovate pull request that raises `pytest-homeassistant-custom-component` in `pyproject.toml` to a version pinning Home Assistant 2026.11 or later. The current pin (0.13.375) brings 2026.10.4, where the claim cannot be checked.
+The test dependency moved to the Core-maintained `pytest-homeassistant` (2026.11.3, brings Home Assistant 2026.11.3); `pytest-homeassistant-custom-component` stopped at 0.13.375 with 2026.10.4. Start any time.
 
 ## Claim (reported)
 
