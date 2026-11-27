@@ -11,7 +11,7 @@ from homeassistant.config_entries import RELOAD_AFTER_UPDATE_DELAY, ConfigEntryS
 from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry, async_fire_time_changed
+from pytest_homeassistant.common import MockConfigEntry, async_fire_time_changed
 
 from custom_components.wolf_smartset.api import System
 from custom_components.wolf_smartset.const import CONF_SYSTEMS, DOMAIN

@@ -16,7 +16,7 @@ from homeassistant.helpers import (
 )
 import probatio
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.wolf_smartset.api import (
     AuthError,

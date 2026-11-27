@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.wolf_smartset import api
 from custom_components.wolf_smartset.api import System, SystemState, Value

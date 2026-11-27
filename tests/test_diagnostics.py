@@ -9,11 +9,11 @@ from unittest.mock import AsyncMock, MagicMock
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-from pytest_homeassistant_custom_component.components.diagnostics import (
+from pytest_homeassistant.common import MockConfigEntry
+from pytest_homeassistant.components.diagnostics import (
     get_diagnostics_for_config_entry,
 )
-from pytest_homeassistant_custom_component.typing import ClientSessionGenerator
+from pytest_homeassistant.typing import ClientSessionGenerator
 
 from custom_components.wolf_smartset.api import System, Value
 from custom_components.wolf_smartset.const import CONF_DRY_RUN, CONF_SYSTEMS, DOMAIN
