@@ -8,8 +8,9 @@ license = "Apache-2.0"
 
 [dependency-groups]
 dev = [
-    # Pins homeassistant, pytest, pytest-asyncio and pytest-cov
-    "pytest-homeassistant-custom-component==0.13.375",
+    # Pins homeassistant, pytest and pytest-asyncio
+    "pytest-homeassistant==2026.11.3",
+    "pytest-cov==7.1.0",
     "ruff==0.17.5",
     "mypy==2.4.1",
     "bandit[toml]==1.9.4",

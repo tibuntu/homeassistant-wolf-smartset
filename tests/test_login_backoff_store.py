@@ -5,7 +5,7 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 import httpx
 import pytest
-from pytest_homeassistant_custom_component.common import async_fire_time_changed
+from pytest_homeassistant.common import async_fire_time_changed
 
 from custom_components.wolf_smartset import api
 from custom_components.wolf_smartset.api import LoginFailed, PortalUnavailable, WolfClient

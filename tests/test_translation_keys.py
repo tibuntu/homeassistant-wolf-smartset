@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.wolf_smartset.const import DOMAIN
 from custom_components.wolf_smartset.model import PLATFORMS, Kind, Parameter, parse_description

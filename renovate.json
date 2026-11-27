@@ -19,7 +19,7 @@
     },
     {
       "description": "Home Assistant test plugin pins homeassistant; keep hacs.json minimum in mind when it moves",
-      "matchDepNames": ["pytest-homeassistant-custom-component", "homeassistant", "pytest", "pytest-asyncio"],
+      "matchDepNames": ["pytest-homeassistant", "homeassistant", "pytest", "pytest-asyncio"],
       "groupName": "homeassistant",
       "semanticCommitScope": "deps"
     },
