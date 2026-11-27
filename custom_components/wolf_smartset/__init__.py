@@ -102,6 +102,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: WolfConfigEntry) -> bool
     # parameters now instead of waiting a full interval with unknown states.
     for coordinator in coordinators.values():
         await coordinator.async_refresh()
+    # ponytail: HA 2026.11 wants None here and below, but 2026.10 (hacs.json minimum)
+    # fails setup on None; 2026.11.3 ignores a bool from custom integrations. Switch
+    # both to None when the minimum reaches 2026.11.
     return True
 
 
